@@ -37,5 +37,8 @@ export async function POST(req:Request){
   if(conflict.rowCount)return NextResponse.json({error:"That 30-minute slot conflicts with another lesson."},{status:409});
   const room="gea-"+crypto.randomUUID();
   const r=await query("INSERT INTO lessons(teacher_id,student_id,starts_at,ends_at,room_code,topic) VALUES($1,$2,$3,$4,$5,$6) RETURNING *",[teacherId,actualStudentId,start,end,room,topic||""]);
+  const people=await query("SELECT id,email,full_name,role FROM users WHERE id=ANY($1::uuid[])",[[teacherId,actualStudentId]]);
+  const teacher=people.rows.find((p:any)=>p.id===teacherId),student=people.rows.find((p:any)=>p.id===actualStudentId);
+  if(teacher&&student)sendBookingEmails({teacherEmail:teacher.email,teacherName:teacher.full_name,studentEmail:student.email,studentName:student.full_name,startsAt:r.rows[0].starts_at,roomCode:r.rows[0].room_code}).catch(e=>console.error("Booking email failed",e));
   return NextResponse.json(r.rows[0])
 }
