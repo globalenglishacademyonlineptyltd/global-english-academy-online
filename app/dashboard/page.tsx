@@ -51,7 +51,7 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    if (u?.role !== "TEACHER") return;
+    if (u?.role !== "TEACHER" && u?.role !== "STUDENT") return;
     loadCancellationRequests();
 
     const refresh = () => loadCancellationRequests();
