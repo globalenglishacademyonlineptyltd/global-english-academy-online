@@ -1,3 +1,4 @@
 # Global English Academy Online
+Production school platform.
 
-Production school management platform for administrators, teachers and students.
+Deployment trigger 2026-10-02-15:05
