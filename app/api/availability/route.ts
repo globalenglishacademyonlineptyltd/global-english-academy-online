@@ -14,6 +14,7 @@ export async function GET(req:Request){
 }
 
 export async function POST(req:Request){
+  try{
   const s=await requireRole(["TEACHER"]);
   const body=await req.json();
   if(body.slotDate&&body.startTime){
@@ -35,6 +36,7 @@ export async function POST(req:Request){
   if(!Number.isInteger(dayOfWeek)||dayOfWeek<0||dayOfWeek>6||!startTime||!endTime||startTime>=endTime)return NextResponse.json({error:"Please provide a valid day and time range."},{status:400});
   const r=await query("INSERT INTO teacher_availability(teacher_id,day_of_week,start_time,end_time) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING RETURNING *",[s.id,dayOfWeek,startTime,endTime]);
   return NextResponse.json(r.rows[0]||{ok:true})
+  }catch(error){console.error("availability POST failed",error);return NextResponse.json({error:"Could not open this slot. Please try again."},{status:500})}
 }
 
 export async function DELETE(req:Request){
