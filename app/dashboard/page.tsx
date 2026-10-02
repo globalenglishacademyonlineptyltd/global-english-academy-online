@@ -21,7 +21,7 @@ export default function Dashboard() {
   const [submitting, setSubmitting] = useState<string | null>(null);
 
   async function loadCancellationRequests() {
-    if (u?.role !== "TEACHER") return;
+    if (u?.role !== "TEACHER" && u?.role !== "STUDENT") return;
     try {
       const x = await fetch("/api/cancellation-requests", { cache: "no-store" });
       if (x.ok) setCancellations(await x.json());
@@ -207,85 +207,7 @@ export default function Dashboard() {
                         <>
                           <Link href={"/classroom/" + l.room_code}>Join</Link>
 
-                          {u.role === "TEACHER" &&
-                            (pending ? (
-                              <button
-                                disabled
-                                style={{
-                                  marginLeft: "10px",
-                                  background: "#dc2626",
-                                  color: "white",
-                                  border: "1px solid #b91c1c",
-                                  cursor: "not-allowed",
-                                }}
-                              >
-                                Request submitted
-                              </button>
-                            ) : (
-                              <button
-                                disabled={submitting === l.id}
-                                style={{
-                                  marginLeft: "10px",
-                                  background:
-                                    submitting === l.id ? "#dc2626" : undefined,
-                                  color:
-                                    submitting === l.id ? "white" : undefined,
-                                }}
-                                onClick={async () => {
-                                  setSubmitting(l.id);
-                                  const reason = window.prompt(
-                                    "Why do you need to cancel this lesson?"
-                                  );
-
-                                  if (reason === null) {
-                                    setSubmitting(null);
-                                    return;
-                                  }
-
-                                  try {
-                                    const x = await fetch(
-                                      "/api/cancellation-requests",
-                                      {
-                                        method: "POST",
-                                        headers: {
-                                          "content-type": "application/json",
-                                        },
-                                        body: JSON.stringify({
-                                          lessonId: l.id,
-                                          reason,
-                                        }),
-                                      }
-                                    );
-
-                                    const j = await x.json();
-
-                                    if (!x.ok) {
-                                      window.alert(j.error);
-                                    } else {
-                                      setCancellations((prev) => [
-                                        ...prev.filter(
-                                          (c) => c.lesson_id !== l.id
-                                        ),
-                                        j,
-                                      ]);
-                                      window.alert(
-                                        "Cancellation request sent to Admin for approval."
-                                      );
-                                    }
-                                  } catch {
-                                    window.alert(
-                                      "Could not submit the cancellation request. Please try again."
-                                    );
-                                  } finally {
-                                    setSubmitting(null);
-                                  }
-                                }}
-                              >
-                                {submitting === l.id
-                                  ? "Submitting…"
-                                  : "Request cancellation"}
-                              </button>
-                            ))}
+                          {(u.role === "TEACHER" || u.role === "STUDENT") && (pending ? (<button disabled style={{marginLeft:"10px",background:"#dc2626",color:"white",border:"1px solid #b91c1c",cursor:"not-allowed"}}>Cancellation Pending</button>) : (<button disabled={submitting===l.id} style={{marginLeft:"10px",background:submitting===l.id?"#dc2626":undefined,color:submitting===l.id?"white":undefined}} onClick={async()=>{setSubmitting(l.id);const reason=window.prompt("Why do you need to cancel this lesson?");if(reason===null){setSubmitting(null);return;}try{const x=await fetch("/api/cancellation-requests",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:l.id,reason})});const j=await x.json();if(!x.ok)window.alert(j.error);else{setCancellations(prev=>[...prev.filter(c=>c.lesson_id!==l.id),j]);window.alert("Cancellation request sent to Admin for approval.");}}catch{window.alert("Could not submit the cancellation request. Please try again.");}finally{setSubmitting(null);}}}>{submitting===l.id?"Submitting…":"Request cancellation"}</button>))}
                         </>
                       ) : null}
                     </td>
