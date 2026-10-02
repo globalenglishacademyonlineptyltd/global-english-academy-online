@@ -19,3 +19,17 @@ export async function POST(req:Request){
   const r=await query("INSERT INTO teacher_availability(teacher_id,day_of_week,start_time,end_time) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING RETURNING *",[s.id,dayOfWeek,startTime,endTime]);
   return NextResponse.json(r.rows[0]||{ok:true})
 }
+
+export async function DELETE(req:Request){
+  const s=await requireRole(["TEACHER"]);
+  const u=new URL(req.url),availabilityId=u.searchParams.get("availabilityId"),slotDate=u.searchParams.get("date"),startTime=u.searchParams.get("startTime");
+  if(!availabilityId||!slotDate||!startTime)return NextResponse.json({error:"Availability, date and start time are required."},{status:400});
+  const a=await query("SELECT * FROM teacher_availability WHERE id=$1 AND teacher_id=$2",[availabilityId,s.id]);
+  if(!a.rowCount)return NextResponse.json({error:"Availability not found."},{status:404});
+  const row=a.rows[0];
+  if(startTime<row.start_time||startTime>=row.end_time)return NextResponse.json({error:"That slot is outside your availability."},{status:400});
+  const booked=await query("SELECT id FROM lessons WHERE teacher_id=$1 AND status<>'CANCELLED' AND starts_at < (($2::date + $3::time) AT TIME ZONE $4) + interval '30 minutes' AND ends_at > (($2::date + $3::time) AT TIME ZONE $4)",[s.id,slotDate,startTime,process.env.SCHOOL_TIMEZONE||"Africa/Johannesburg"]);
+  if(booked.rowCount)return NextResponse.json({error:"This slot is booked. Please request cancellation approval instead."},{status:409});
+  await query("INSERT INTO teacher_availability_exceptions(teacher_id,slot_date,start_time) VALUES($1,$2,$3) ON CONFLICT DO NOTHING",[s.id,slotDate,startTime]);
+  return NextResponse.json({ok:true});
+}
