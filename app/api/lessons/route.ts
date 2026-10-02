@@ -24,8 +24,7 @@ export async function POST(req:Request){
     const localDate=start.toLocaleDateString("en-CA",{timeZone:tz});
     const localTime=start.toLocaleTimeString("en-GB",{timeZone:tz,hour:"2-digit",minute:"2-digit",hour12:false});
     const one=await query("SELECT id FROM teacher_availability_slots WHERE teacher_id=$1 AND slot_date=$2 AND start_time=$3",[teacherId,localDate,localTime]);
-    const av=await query("SELECT id FROM teacher_availability WHERE teacher_id=$1 AND day_of_week=EXTRACT(DOW FROM ($2::timestamptz AT TIME ZONE $3))::int AND ($2::timestamptz AT TIME ZONE $3)::time >= start_time AND ($2::timestamptz AT TIME ZONE $3)::time < end_time",[teacherId,start.toISOString(),tz]);
-    if(!one.rowCount&&!av.rowCount)return NextResponse.json({error:"That teacher is not available at the selected time."},{status:409});
+    if(!one.rowCount)return NextResponse.json({error:"That exact 30-minute slot has not been opened by the teacher."},{status:409});
     const ex=await query("SELECT id FROM teacher_availability_exceptions WHERE teacher_id=$1 AND slot_date=(($2::timestamptz AT TIME ZONE $3)::date) AND start_time=(($2::timestamptz AT TIME ZONE $3)::time)",[teacherId,start.toISOString(),tz]);
     if(ex.rowCount)return NextResponse.json({error:"That slot is no longer available."},{status:409});
   }
