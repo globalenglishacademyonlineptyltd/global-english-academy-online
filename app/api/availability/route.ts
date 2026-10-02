@@ -18,7 +18,9 @@ export async function POST(req:Request){
   const body=await req.json();
   if(body.slotDate&&body.startTime){
     const slotDate=String(body.slotDate),startTime=String(body.startTime);
-    const windowCheck=await query("SELECT ((now() AT TIME ZONE $1)::date) AS today, (((now() AT TIME ZONE $1)::date)+14) AS max_date",[process.env.SCHOOL_TIMEZONE||"Africa/Johannesburg"]);\n    const today=windowCheck.rows[0].today,maxDate=windowCheck.rows[0].max_date;\n    if(slotDate<today||slotDate>maxDate)return NextResponse.json({error:"You can only open slots from today through 14 days ahead."},{status:400});
+    const windowCheck=await query("SELECT ((now() AT TIME ZONE $1)::date) AS today, (((now() AT TIME ZONE $1)::date)+14) AS max_date",[process.env.SCHOOL_TIMEZONE||"Africa/Johannesburg"]);
+    const today=windowCheck.rows[0].today,maxDate=windowCheck.rows[0].max_date;
+    if(slotDate<today||slotDate>maxDate)return NextResponse.json({error:"You can only open slots from today through 14 days ahead."},{status:400});
     const p=startTime.split(":").map(Number),mins=p[0]*60+p[1];
     if(!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(slotDate)||!/^[0-9]{2}:[0-9]{2}$/.test(startTime)||mins%30!==0)return NextResponse.json({error:"Please provide a valid 30-minute slot."},{status:400});
     const endMins=mins+30,endTime=String(Math.floor(endMins/60)).padStart(2,"0")+":"+String(endMins%60).padStart(2,"0");
