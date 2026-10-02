@@ -1,0 +1,1 @@
+export default function Recordings(){return <main className="main"><h1>Recordings</h1><p className="muted">Recordings are created from the classroom. Cloud storage can be attached to the recording records when a storage provider is configured.</p><div className="card section">No cloud recordings have been stored yet.</div></main>}
