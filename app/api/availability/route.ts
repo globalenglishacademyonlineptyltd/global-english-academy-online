@@ -4,11 +4,11 @@ export async function GET(req:Request){
   const s=await requireRole(["ADMIN","TEACHER","STUDENT"]);
   const u=new URL(req.url),teacherId=u.searchParams.get("teacherId");
   if(teacherId){
-    const slots=await query("SELECT a.id,a.slot_date,a.start_time,a.end_time FROM teacher_availability_slots a WHERE a.teacher_id=$1 AND NOT EXISTS (SELECT 1 FROM lessons l WHERE l.teacher_id=a.teacher_id AND l.status<>'CANCELLED' AND l.starts_at < ((a.slot_date+a.start_time) AT TIME ZONE $2) + interval '30 minutes' AND l.ends_at > ((a.slot_date+a.start_time) AT TIME ZONE $2)) ORDER BY a.slot_date,a.start_time",[teacherId,process.env.SCHOOL_TIMEZONE||"Africa/Johannesburg"]);
+    const slots=await query("SELECT a.id,a.slot_date::text AS slot_date,a.start_time::text AS start_time,a.end_time::text AS end_time FROM teacher_availability_slots a WHERE a.teacher_id=$1 AND NOT EXISTS (SELECT 1 FROM lessons l WHERE l.teacher_id=a.teacher_id AND l.status<>'CANCELLED' AND l.starts_at < ((a.slot_date+a.start_time) AT TIME ZONE $2) + interval '30 minutes' AND l.ends_at > ((a.slot_date+a.start_time) AT TIME ZONE $2)) ORDER BY a.slot_date,a.start_time",[teacherId,process.env.SCHOOL_TIMEZONE||"Africa/Johannesburg"]);
     return NextResponse.json(slots.rows)
   }
   if(s.role==="TEACHER"){
-    const r=await query("SELECT id,slot_date,start_time,end_time FROM teacher_availability_slots WHERE teacher_id=$1 ORDER BY slot_date,start_time",[s.id]);
+    const r=await query("SELECT id,slot_date::text AS slot_date,start_time::text AS start_time,end_time::text AS end_time FROM teacher_availability_slots WHERE teacher_id=$1 ORDER BY slot_date,start_time",[s.id]);
     return NextResponse.json(r.rows)
   }
   const r=await query("SELECT u.id,u.full_name as name,COUNT(a.id)::int as availability_count FROM users u LEFT JOIN teacher_availability_slots a ON a.teacher_id=u.id AND a.slot_date BETWEEN ((now() AT TIME ZONE $1)::date) AND (((now() AT TIME ZONE $1)::date)+14) WHERE u.role='TEACHER' AND u.active=true GROUP BY u.id,u.full_name ORDER BY u.full_name",[process.env.SCHOOL_TIMEZONE||"Africa/Johannesburg"]);
@@ -30,7 +30,7 @@ export async function POST(req:Request){
     const tz=process.env.SCHOOL_TIMEZONE||"Africa/Johannesburg";const passed=await query("SELECT (($2::date + $3::time) <= (now() AT TIME ZONE $1)) AS passed",[tz,slotDate,startTime]);if(passed.rows[0].passed)return NextResponse.json({error:"That lesson time has already passed and can no longer be booked."},{status:400});
     const booked=await query("SELECT id FROM lessons WHERE teacher_id=$1 AND status<>'CANCELLED' AND starts_at < (($2::date + $3::time) AT TIME ZONE $4) + interval '30 minutes' AND ends_at > (($2::date + $3::time) AT TIME ZONE $4)",[s.id,slotDate,startTime,tz]);
     if(booked.rowCount)return NextResponse.json({error:"That slot is already booked."},{status:409});
-    const r=await query("INSERT INTO teacher_availability_slots(teacher_id,slot_date,start_time,end_time) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING RETURNING *",[s.id,slotDate,startTime,endTime]);
+    const r=await query("INSERT INTO teacher_availability_slots(teacher_id,slot_date,start_time,end_time) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING RETURNING id,slot_date::text AS slot_date,start_time::text AS start_time,end_time::text AS end_time",[s.id,slotDate,startTime,endTime]);
     await query("DELETE FROM teacher_availability_exceptions WHERE teacher_id=$1 AND slot_date=$2 AND start_time=$3",[s.id,slotDate,startTime]);
     return NextResponse.json(r.rows[0]||{ok:true})
   }
