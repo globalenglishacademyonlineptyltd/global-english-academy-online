@@ -16,7 +16,7 @@ export async function POST(req:Request){
   if(!teacherId||!actualStudentId||!startsAt)return NextResponse.json({error:"Teacher and start time are required."},{status:400});
   const start=new Date(startsAt);
   if(Number.isNaN(start.getTime())||start.getTime()<=Date.now())return NextResponse.json({error:"Please choose a future lesson time."},{status:400});
-  const end=new Date(start.getTime()+1800000);
+  const localMinute=start.getMinutes();if(localMinute%30!==0)return NextResponse.json({error:"Lessons must start on the half-hour."},{status:400});const end=new Date(start.getTime()+1800000);
   const tz=process.env.SCHOOL_TIMEZONE||"Africa/Johannesburg";
   if(s.role==="STUDENT"){
     const teacher=await query("SELECT id FROM users WHERE id=$1 AND role='TEACHER' AND active=true",[teacherId]);
