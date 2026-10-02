@@ -5,6 +5,7 @@ import{createSessionToken,setSessionCookie}from"@/lib/auth";
 export const dynamic="force-dynamic";
 
 export async function POST(req:Request){
+  await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password boolean NOT NULL DEFAULT false");
   const{email,password}=await req.json();
   const r=await query<any>("SELECT id,email,password_hash,full_name,role,active,coalesce(must_change_password,false) as must_change_password FROM users WHERE lower(email)=lower($1)",[email]);
   const u=r.rows[0];
