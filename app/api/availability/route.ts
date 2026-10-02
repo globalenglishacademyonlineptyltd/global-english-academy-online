@@ -14,7 +14,20 @@ export async function GET(req:Request){
 
 export async function POST(req:Request){
   const s=await requireRole(["TEACHER"]);
-  const{dayOfWeek,startTime,endTime}=await req.json();
+  const body=await req.json();
+  if(body.slotDate&&body.startTime){
+    const slotDate=String(body.slotDate),startTime=String(body.startTime);
+    const p=startTime.split(":").map(Number),mins=p[0]*60+p[1];
+    if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(slotDate)||!/^\\d{2}:\\d{2}$/.test(startTime)||mins%30!==0)return NextResponse.json({error:"Please provide a valid 30-minute slot."},{status:400});
+    const endMins=mins+30,endTime=String(Math.floor(endMins/60)).padStart(2,"0")+":"+String(endMins%60).padStart(2,"0");
+    const tz=process.env.SCHOOL_TIMEZONE||"Africa/Johannesburg";
+    const booked=await query("SELECT id FROM lessons WHERE teacher_id=$1 AND status<>'CANCELLED' AND starts_at < (($2::date + $3::time) AT TIME ZONE $4) + interval '30 minutes' AND ends_at > (($2::date + $3::time) AT TIME ZONE $4)",[s.id,slotDate,startTime,tz]);
+    if(booked.rowCount)return NextResponse.json({error:"That slot is already booked."},{status:409});
+    const r=await query("INSERT INTO teacher_availability_slots(teacher_id,slot_date,start_time,end_time) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING RETURNING *",[s.id,slotDate,startTime,endTime]);
+    await query("DELETE FROM teacher_availability_exceptions WHERE teacher_id=$1 AND slot_date=$2 AND start_time=$3",[s.id,slotDate,startTime]);
+    return NextResponse.json(r.rows[0]||{ok:true})
+  }
+  const{dayOfWeek,startTime,endTime}=body;
   if(!Number.isInteger(dayOfWeek)||dayOfWeek<0||dayOfWeek>6||!startTime||!endTime||startTime>=endTime)return NextResponse.json({error:"Please provide a valid day and time range."},{status:400});
   const r=await query("INSERT INTO teacher_availability(teacher_id,day_of_week,start_time,end_time) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING RETURNING *",[s.id,dayOfWeek,startTime,endTime]);
   return NextResponse.json(r.rows[0]||{ok:true})
