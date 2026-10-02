@@ -1,0 +1,1 @@
+import{NextResponse}from"next/server";import{getSession,userExists}from"@/lib/auth";export async function GET(){return NextResponse.json({setup:!(await userExists()),user:await getSession()})}
