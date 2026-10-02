@@ -21,8 +21,11 @@ export async function POST(req:Request){
   if(s.role==="STUDENT"){
     const teacher=await query("SELECT id FROM users WHERE id=$1 AND role='TEACHER' AND active=true",[teacherId]);
     if(!teacher.rowCount)return NextResponse.json({error:"Teacher not found."},{status:404});
+    const localDate=start.toLocaleDateString("en-CA",{timeZone:tz});
+    const localTime=start.toLocaleTimeString("en-GB",{timeZone:tz,hour:"2-digit",minute:"2-digit",hour12:false});
+    const one=await query("SELECT id FROM teacher_availability_slots WHERE teacher_id=$1 AND slot_date=$2 AND start_time=$3",[teacherId,localDate,localTime]);
     const av=await query("SELECT id FROM teacher_availability WHERE teacher_id=$1 AND day_of_week=EXTRACT(DOW FROM ($2::timestamptz AT TIME ZONE $3))::int AND ($2::timestamptz AT TIME ZONE $3)::time >= start_time AND ($2::timestamptz AT TIME ZONE $3)::time < end_time",[teacherId,start.toISOString(),tz]);
-    if(!av.rowCount)return NextResponse.json({error:"That teacher is not available at the selected time."},{status:409});
+    if(!one.rowCount&&!av.rowCount)return NextResponse.json({error:"That teacher is not available at the selected time."},{status:409});
     const ex=await query("SELECT id FROM teacher_availability_exceptions WHERE teacher_id=$1 AND slot_date=(($2::timestamptz AT TIME ZONE $3)::date) AND start_time=(($2::timestamptz AT TIME ZONE $3)::time)",[teacherId,start.toISOString(),tz]);
     if(ex.rowCount)return NextResponse.json({error:"That slot is no longer available."},{status:409});
   }
