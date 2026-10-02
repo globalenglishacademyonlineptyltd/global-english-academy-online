@@ -1,1 +1,1 @@
-export const dynamic="force-dynamic";import{NextResponse}from"next/server";import{getSession,userExists}from"@/lib/auth";export async function GET(){return NextResponse.json({setup:!(await userExists()),user:await getSession()})}
+export const dynamic="force-dynamic";export const revalidate=0;import{NextResponse}from"next/server";import{getSession,userExists}from"@/lib/auth";export async function GET(){return NextResponse.json({setup:!(await userExists()),user:await getSession()})}
