@@ -40,7 +40,6 @@ export default function Login() {
       <form className="login-card" onSubmit={submit}>
         <div className="brand">Global English Academy</div>
         <h1>Sign in</h1>
-        <p className="muted">Admin, teacher and student access.</p>
         <label>Email<input className="input" type="email" required placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" /></label>
         <label>Password<input className="input" type="password" required placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" /></label>
         {error && <p className="error">{error}</p>}
