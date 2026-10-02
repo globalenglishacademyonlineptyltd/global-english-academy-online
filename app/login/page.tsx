@@ -1,23 +1,50 @@
 "use client";
 
-import { FormEvent } from "react";
+import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function Login() {
   const router = useRouter();
-  function submit(e: FormEvent) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function submit(e: FormEvent) {
     e.preventDefault();
-    router.push("/dashboard");
+    setError("");
+    setLoading(true);
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(data.error || "Unable to sign in. Please check your email and password.");
+        return;
+      }
+      router.replace("/dashboard");
+      router.refresh();
+    } catch {
+      setError("Unable to connect to the school platform. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
+
   return (
     <main className="login">
       <form className="login-card" onSubmit={submit}>
         <div className="brand">Global English Academy</div>
         <h1>Sign in</h1>
-        <p className="muted">Admin, teacher and student access will be secured here.</p>
-        <label>Email<input className="input" type="email" required placeholder="you@example.com" /></label>
-        <label>Password<input className="input" type="password" required placeholder="••••••••" /></label>
-        <button className="primary" type="submit">Continue</button>
+        <p className="muted">Admin, teacher and student access.</p>
+        <label>Email<input className="input" type="email" required placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" /></label>
+        <label>Password<input className="input" type="password" required placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" /></label>
+        {error && <p className="error">{error}</p>}
+        <button className="primary" type="submit" disabled={loading}>{loading ? "Signing in…" : "Continue"}</button>
       </form>
     </main>
   );
