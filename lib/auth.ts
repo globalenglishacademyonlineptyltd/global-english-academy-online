@@ -33,7 +33,7 @@ export async function getSession():Promise<SessionUser|null>{
   if(!token)return null;
   try{
     const {payload}=await jwtVerify(token,secret);
-    return {id:String(payload.id),email:String(payload.email),name:String(payload.name),role:payload.role as SessionUser["role"],mustChangePassword:payload.mustChangePassword==="true"};
+    return {id:String(payload.id),email:String(payload.email),name:String(payload.name),role:payload.role as SessionUser["role"],mustChangePassword:payload.mustChangePassword===true||payload.mustChangePassword==="true"};
   }catch{return null;}
 }
 
