@@ -1,1 +1,1 @@
-const nextConfig={poweredByHeader:false,typescript:{ignoreBuildErrors:true}};export default nextConfig;
+const nextConfig={poweredByHeader:false,typescript:{ignoreBuildErrors:true},output:"standalone"};export default nextConfig;
