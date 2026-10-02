@@ -19,7 +19,7 @@ export async function POST(req:Request){
   if(body.slotDate&&body.startTime){
     const slotDate=String(body.slotDate),startTime=String(body.startTime);
     const p=startTime.split(":").map(Number),mins=p[0]*60+p[1];
-    if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(slotDate)||!/^\\d{2}:\\d{2}$/.test(startTime)||mins%30!==0)return NextResponse.json({error:"Please provide a valid 30-minute slot."},{status:400});
+    if(!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(slotDate)||!/^[0-9]{2}:[0-9]{2}$/.test(startTime)||mins%30!==0)return NextResponse.json({error:"Please provide a valid 30-minute slot."},{status:400});
     const endMins=mins+30,endTime=String(Math.floor(endMins/60)).padStart(2,"0")+":"+String(endMins%60).padStart(2,"0");
     const tz=process.env.SCHOOL_TIMEZONE||"Africa/Johannesburg";
     const booked=await query("SELECT id FROM lessons WHERE teacher_id=$1 AND status<>'CANCELLED' AND starts_at < (($2::date + $3::time) AT TIME ZONE $4) + interval '30 minutes' AND ends_at > (($2::date + $3::time) AT TIME ZONE $4)",[s.id,slotDate,startTime,tz]);
@@ -37,7 +37,13 @@ export async function POST(req:Request){
 export async function DELETE(req:Request){
   const s=await requireRole(["TEACHER"]);
   const u=new URL(req.url),availabilityId=u.searchParams.get("availabilityId"),slotDate=u.searchParams.get("date"),startTime=u.searchParams.get("startTime");
-  if(!availabilityId||!slotDate||!startTime)return NextResponse.json({error:"Availability, date and start time are required."},{status:400});
+  if(!slotDate||!startTime)return NextResponse.json({error:"Date and start time are required."},{status:400});
+  if(!availabilityId){
+    const booked=await query("SELECT id FROM lessons WHERE teacher_id=$1 AND status<>'CANCELLED' AND starts_at < (($2::date + $3::time) AT TIME ZONE $4) + interval '30 minutes' AND ends_at > (($2::date + $3::time) AT TIME ZONE $4)",[s.id,slotDate,startTime,process.env.SCHOOL_TIMEZONE||"Africa/Johannesburg"]);
+    if(booked.rowCount)return NextResponse.json({error:"This slot is booked. Please request cancellation approval instead."},{status:409});
+    await query("DELETE FROM teacher_availability_slots WHERE teacher_id=$1 AND slot_date=$2 AND start_time=$3",[s.id,slotDate,startTime]);
+    return NextResponse.json({ok:true});
+  }
   const a=await query("SELECT * FROM teacher_availability WHERE id=$1 AND teacher_id=$2",[availabilityId,s.id]);
   if(!a.rowCount)return NextResponse.json({error:"Availability not found."},{status:404});
   const row=a.rows[0];
