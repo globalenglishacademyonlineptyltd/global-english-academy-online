@@ -19,6 +19,11 @@ export async function POST(req:Request){
   const localMinute=start.getMinutes();if(localMinute%30!==0)return NextResponse.json({error:"Lessons must start on the half-hour."},{status:400});const end=new Date(start.getTime()+1800000);
   const tz=process.env.SCHOOL_TIMEZONE||"Africa/Johannesburg";
   if(s.role==="STUDENT"){
+    const windowCheck=await query("SELECT ((now() AT TIME ZONE $1)::date) AS today, (((now() AT TIME ZONE $1)::date)+14) AS max_date",[tz]);
+    const localDateCheck=start.toLocaleDateString("en-CA",{timeZone:tz});
+    if(localDateCheck<windowCheck.rows[0].today||localDateCheck>windowCheck.rows[0].max_date)return NextResponse.json({error:"Lessons can only be booked within the rolling 14-day booking window."},{status:409});
+  }
+  if(s.role==="STUDENT"){
     const teacher=await query("SELECT id FROM users WHERE id=$1 AND role='TEACHER' AND active=true",[teacherId]);
     if(!teacher.rowCount)return NextResponse.json({error:"Teacher not found."},{status:404});
     const localDate=start.toLocaleDateString("en-CA",{timeZone:tz});
