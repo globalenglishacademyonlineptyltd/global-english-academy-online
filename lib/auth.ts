@@ -4,7 +4,7 @@ import {query} from "./db";
 
 const secret=new TextEncoder().encode(process.env.AUTH_SECRET||"change-me");
 const COOKIE="gea_session";
-export type SessionUser={id:string;email:string;name:string;role:"ADMIN"|"TEACHER"|"STUDENT"};
+export type SessionUser={id:string;email:string;name:string;role:"ADMIN"|"TEACHER"|"STUDENT"|"PARENT"};
 
 export async function createSessionToken(user:SessionUser){
   return new SignJWT(user).setProtectedHeader({alg:"HS256"}).setIssuedAt().setExpirationTime("7d").sign(secret);
