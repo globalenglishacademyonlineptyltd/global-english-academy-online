@@ -19,12 +19,12 @@ export async function POST(req:Request){
   if(body.slotDate&&body.startTime){
     const slotDate=String(body.slotDate),startTime=String(body.startTime);
     const windowCheck=await query("SELECT ((now() AT TIME ZONE $1)::date) AS today, (((now() AT TIME ZONE $1)::date)+14) AS max_date",[process.env.SCHOOL_TIMEZONE||"Africa/Johannesburg"]);
-    const today=windowCheck.rows[0].today,maxDate=windowCheck.rows[0].max_date; const nowCheck=await query("SELECT now() AT TIME ZONE $1 AS local_now",[process.env.SCHOOL_TIMEZONE||"Africa/Johannesburg"]);
+    const today=windowCheck.rows[0].today,maxDate=windowCheck.rows[0].max_date;
     if(slotDate<today||slotDate>maxDate)return NextResponse.json({error:"You can only open slots from today through 14 days ahead."},{status:400});
     const p=startTime.split(":").map(Number),mins=p[0]*60+p[1];
     if(!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(slotDate)||!/^[0-9]{2}:[0-9]{2}$/.test(startTime)||mins%30!==0)return NextResponse.json({error:"Please provide a valid 30-minute slot."},{status:400});
     const endMins=mins+30,endTime=String(Math.floor(endMins/60)).padStart(2,"0")+":"+String(endMins%60).padStart(2,"0");
-    const tz=process.env.SCHOOL_TIMEZONE||"Africa/Johannesburg"; const localNow=new Date(nowCheck.rows[0].local_now); const slotDateTime=new Date(`${slotDate}T${startTime}:00`); if(slotDateTime<=localNow)return NextResponse.json({error:"That lesson time has already passed and can no longer be booked."},{status:400});
+    const tz=process.env.SCHOOL_TIMEZONE||"Africa/Johannesburg"; const passed=await query("SELECT (($2::date + $3::time) <= (now() AT TIME ZONE $1)) AS passed",[tz,slotDate,startTime]); if(passed.rows[0].passed)return NextResponse.json({error:"That lesson time has already passed and can no longer be booked."},{status:400});
     const booked=await query("SELECT id FROM lessons WHERE teacher_id=$1 AND status<>'CANCELLED' AND starts_at < (($2::date + $3::time) AT TIME ZONE $4) + interval '30 minutes' AND ends_at > (($2::date + $3::time) AT TIME ZONE $4)",[s.id,slotDate,startTime,tz]);
     if(booked.rowCount)return NextResponse.json({error:"That slot is already booked."},{status:409});
     const r=await query("INSERT INTO teacher_availability_slots(teacher_id,slot_date,start_time,end_time) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING RETURNING *",[s.id,slotDate,startTime,endTime]);
