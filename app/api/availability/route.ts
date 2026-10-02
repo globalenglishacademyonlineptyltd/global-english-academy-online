@@ -33,3 +33,18 @@ export async function DELETE(req:Request){
   await query("INSERT INTO teacher_availability_exceptions(teacher_id,slot_date,start_time) VALUES($1,$2,$3) ON CONFLICT DO NOTHING",[s.id,slotDate,startTime]);
   return NextResponse.json({ok:true});
 }
+
+
+export async function PATCH(req:Request){
+  const s=await requireRole(["TEACHER"]);
+  const{availabilityId}=await req.json();
+  if(!availabilityId)return NextResponse.json({error:"Availability is required."},{status:400});
+  const a=await query("SELECT * FROM teacher_availability WHERE id=$1 AND teacher_id=$2",[availabilityId,s.id]);
+  if(!a.rowCount)return NextResponse.json({error:"Availability not found."},{status:404});
+  const row=a.rows[0];
+  const tz=process.env.SCHOOL_TIMEZONE||"Africa/Johannesburg";
+  const booked=await query("SELECT id FROM lessons WHERE teacher_id=$1 AND status<>'CANCELLED' AND EXTRACT(DOW FROM (starts_at AT TIME ZONE $2))::int=$3 AND (starts_at AT TIME ZONE $2)::time < $5::time AND (ends_at AT TIME ZONE $2)::time > $4::time",[s.id,tz,row.day_of_week,row.start_time,row.end_time]);
+  if(booked.rowCount)return NextResponse.json({error:"This recurring availability contains booked lessons. Please request cancellation approval for those lessons first before removing this availability."},{status:409});
+  await query("DELETE FROM teacher_availability WHERE id=$1 AND teacher_id=$2",[availabilityId,s.id]);
+  return NextResponse.json({ok:true});
+}
