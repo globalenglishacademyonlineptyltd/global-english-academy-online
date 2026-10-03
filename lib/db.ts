@@ -4,7 +4,7 @@ const schema=`
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE TABLE IF NOT EXISTS users(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),email text UNIQUE NOT NULL,password_hash text NOT NULL,full_name text NOT NULL,role text NOT NULL CHECK(role IN ('ADMIN','TEACHER','STUDENT','PARENT')),active boolean NOT NULL DEFAULT true,created_at timestamptz NOT NULL DEFAULT now());
 CREATE TABLE IF NOT EXISTS parent_students(parent_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,student_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,PRIMARY KEY(parent_id,student_id));
-CREATE TABLE IF NOT EXISTS students(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),user_id uuid UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,level text DEFAULT 'Beginner',notes text DEFAULT '',age int,starting_material_id uuid REFERENCES materials(id) ON DELETE SET NULL,created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE IF NOT EXISTS students(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),user_id uuid UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,level text DEFAULT 'Beginner',notes text DEFAULT '',age int,starting_material_id uuid,created_at timestamptz NOT NULL DEFAULT now());
 CREATE TABLE IF NOT EXISTS teacher_availability(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),teacher_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,day_of_week int NOT NULL CHECK(day_of_week BETWEEN 0 AND 6),start_time time NOT NULL,end_time time NOT NULL,UNIQUE(teacher_id,day_of_week,start_time,end_time));
 CREATE TABLE IF NOT EXISTS teacher_availability_exceptions(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),teacher_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,slot_date date NOT NULL,start_time time NOT NULL,UNIQUE(teacher_id,slot_date,start_time));
 CREATE TABLE IF NOT EXISTS teacher_availability_slots(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),teacher_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,slot_date date NOT NULL,start_time time NOT NULL,end_time time NOT NULL,UNIQUE(teacher_id,slot_date,start_time));
@@ -20,7 +20,7 @@ ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
 ALTER TABLE users ADD CONSTRAINT users_role_check CHECK(role IN ('ADMIN','TEACHER','STUDENT','PARENT'));
 ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password boolean NOT NULL DEFAULT false;
 ALTER TABLE students ADD COLUMN IF NOT EXISTS age int;
-ALTER TABLE students ADD COLUMN IF NOT EXISTS starting_material_id uuid;
+ALTER TABLE students ADD COLUMN IF NOT EXISTS starting_material_id uuid;ALTER TABLE students DROP CONSTRAINT IF EXISTS students_starting_material_fk;ALTER TABLE students ADD CONSTRAINT students_starting_material_fk FOREIGN KEY(starting_material_id) REFERENCES materials(id) ON DELETE SET NULL;
 ALTER TABLE materials ADD COLUMN IF NOT EXISTS content_data text DEFAULT '';
 ALTER TABLE materials ADD COLUMN IF NOT EXISTS mime_type text DEFAULT '';
 ALTER TABLE materials ADD COLUMN IF NOT EXISTS folder text DEFAULT 'Level 1';
