@@ -90,6 +90,7 @@ export default function Dashboard() {
           ["Students", "/dashboard/students"],
           ["Lessons", "/dashboard/lessons"],
           ["Cancellation Requests", "/dashboard/cancellations"],
+          ["Teacher Leave Requests", "/dashboard/teacher-leave"],
           ["Materials", "/dashboard/materials"],
           ["Recordings", "/dashboard/recordings"],
           ["School Branding", "/dashboard/branding"],
@@ -99,6 +100,7 @@ export default function Dashboard() {
             ["My Session", "/dashboard"],
             ["Teaching Record", "/dashboard/records"],
             ["Booking Time", "/dashboard/availability"],
+            ["Apply for Leave", "/dashboard/leave"],
           ]
         : [
             ["My Lessons", "/dashboard"],
