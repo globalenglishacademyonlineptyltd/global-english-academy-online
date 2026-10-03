@@ -109,7 +109,7 @@ export default function Dashboard() {
       : u.role === "TEACHER"
         ? [
             ["My Session", "/dashboard"],
-            ["Teaching Record", "/dashboard/records"],
+            ["Teaching History", "/dashboard/records"],
             ["Booking Time", "/dashboard/availability"],
             ["Apply for Leave", "/dashboard/leave"],
           ]
