@@ -116,7 +116,7 @@ export default function Dashboard() {
         : [
             ["My Lessons", "/dashboard"],
             ["Book a Lesson", "/dashboard/book"],
-            ["Teaching History", "/dashboard/records"],
+            ["Lesson History", "/dashboard/records"],
           ];
 
   return (
