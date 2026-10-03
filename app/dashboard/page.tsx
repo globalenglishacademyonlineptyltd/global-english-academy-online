@@ -183,6 +183,7 @@ export default function Dashboard() {
           <table className="table">
             <thead>
               <tr>
+                {u.role === "TEACHER" && <th>Class ID</th>}
                 <th>Date</th>
                 <th>Time</th>
                 <th>Teacher</th>
@@ -198,6 +199,7 @@ export default function Dashboard() {
 
                 return (
                   <tr key={l.id}>
+                    {u.role === "TEACHER" && <td>{l.class_id || "—"}</td>}
                     <td>{new Date(l.starts_at).toLocaleDateString()}</td>
                     <td>
                       {new Date(l.starts_at).toLocaleTimeString([], {
