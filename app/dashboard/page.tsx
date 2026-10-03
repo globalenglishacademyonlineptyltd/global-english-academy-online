@@ -110,6 +110,7 @@ export default function Dashboard() {
         ? [
             ["My Session", "/dashboard"],
             ["Teaching History", "/dashboard/records"],
+            ["Score", "/dashboard/score"],
             ["Booking Time", "/dashboard/availability"],
             ["Apply for Leave", "/dashboard/leave"],
           ]
@@ -117,6 +118,7 @@ export default function Dashboard() {
             ["My Lessons", "/dashboard"],
             ["Book a Lesson", "/dashboard/book"],
             ["Lesson History", "/dashboard/records"],
+            ["Rate Teachers", "/dashboard/rate-teachers"],
           ];
 
   return (
