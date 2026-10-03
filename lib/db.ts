@@ -9,6 +9,15 @@ CREATE TABLE IF NOT EXISTS teacher_availability(id uuid PRIMARY KEY DEFAULT gen_
 CREATE TABLE IF NOT EXISTS teacher_availability_exceptions(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),teacher_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,slot_date date NOT NULL,start_time time NOT NULL,UNIQUE(teacher_id,slot_date,start_time));
 CREATE TABLE IF NOT EXISTS teacher_availability_slots(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),teacher_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,slot_date date NOT NULL,start_time time NOT NULL,end_time time NOT NULL,UNIQUE(teacher_id,slot_date,start_time));
 CREATE TABLE IF NOT EXISTS lessons(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),teacher_id uuid NOT NULL REFERENCES users(id),student_id uuid NOT NULL REFERENCES users(id),starts_at timestamptz NOT NULL,ends_at timestamptz NOT NULL,status text NOT NULL DEFAULT 'SCHEDULED',room_code text UNIQUE NOT NULL,topic text DEFAULT '',lesson_type text NOT NULL DEFAULT 'ONE_ON_ONE');
+CREATE SEQUENCE IF NOT EXISTS lesson_class_number_seq AS bigint START WITH 1;
+ALTER TABLE lessons ADD COLUMN IF NOT EXISTS class_number bigint;
+ALTER TABLE lessons ADD COLUMN IF NOT EXISTS class_id text;
+UPDATE lessons SET class_number=nextval('lesson_class_number_seq') WHERE class_number IS NULL;
+SELECT setval('lesson_class_number_seq',COALESCE((SELECT MAX(class_number) FROM lessons),0)+1,false);
+UPDATE lessons SET class_id='GEAO'||to_char(starts_at AT TIME ZONE 'Africa/Johannesburg','YYYYMMDD')||'/'||lpad(class_number::text,3,'0') WHERE class_id IS NULL;
+ALTER TABLE lessons ALTER COLUMN class_number SET DEFAULT nextval('lesson_class_number_seq');
+CREATE UNIQUE INDEX IF NOT EXISTS idx_lessons_class_number ON lessons(class_number);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_lessons_class_id ON lessons(class_id);
 CREATE TABLE IF NOT EXISTS lesson_records(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),lesson_id uuid UNIQUE NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,teacher_id uuid NOT NULL REFERENCES users(id),notes text DEFAULT '',homework text DEFAULT '',created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now());
 ALTER TABLE lesson_records ADD COLUMN IF NOT EXISTS scores jsonb NOT NULL DEFAULT '{}'::jsonb;ALTER TABLE lesson_records ADD COLUMN IF NOT EXISTS assessment text NOT NULL DEFAULT '';ALTER TABLE lesson_records ADD COLUMN IF NOT EXISTS report_status text NOT NULL DEFAULT 'FINISHED' CHECK(report_status IN ('FINISHED','UNFINISHED','NO_NEED'));
 CREATE TABLE IF NOT EXISTS materials(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),title text NOT NULL,description text DEFAULT '',url text DEFAULT '',level text DEFAULT '',folder text DEFAULT 'Level 1',sequence_no int NOT NULL DEFAULT 1,created_by uuid REFERENCES users(id),content_data text DEFAULT '',mime_type text DEFAULT '',created_at timestamptz NOT NULL DEFAULT now());
