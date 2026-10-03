@@ -116,7 +116,6 @@ export default function Dashboard() {
         : [
             ["My Lessons", "/dashboard"],
             ["Book a Lesson", "/dashboard/book"],
-            ["Lesson Materials", "/dashboard/materials"],
             ["Teaching History", "/dashboard/records"],
           ];
 
@@ -163,10 +162,6 @@ export default function Dashboard() {
               <div className="card">
                 <div className="muted">Lessons</div>
                 <div className="metric">{lessons.length}</div>
-              </div>
-              <div className="card">
-                <div className="muted">Materials</div>
-                <div className="metric">{materials.length}</div>
               </div>
             </>
           ) : (
