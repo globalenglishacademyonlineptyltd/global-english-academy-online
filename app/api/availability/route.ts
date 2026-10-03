@@ -19,6 +19,11 @@ export async function POST(req:Request){
   try{
   const s=await requireRole(["TEACHER"]);
   const body=await req.json();
+  if(body.action==="closeFuture"){
+    const tz=process.env.SCHOOL_TIMEZONE||"Africa/Johannesburg";
+    const r=await query("DELETE FROM teacher_availability_slots a WHERE a.teacher_id=$1 AND ((a.slot_date+a.start_time) AT TIME ZONE $2)>now() AND NOT EXISTS (SELECT 1 FROM lessons l WHERE l.teacher_id=a.teacher_id AND l.status<>'CANCELLED' AND l.starts_at < ((a.slot_date+a.start_time) AT TIME ZONE $2)+interval '30 minutes' AND l.ends_at > ((a.slot_date+a.start_time) AT TIME ZONE $2))",[s.id,tz]);
+    return NextResponse.json({ok:true,closed:r.rowCount||0});
+  }
   if(body.slotDate&&body.startTime){
     const slotDate=String(body.slotDate),startTime=String(body.startTime);
     const windowCheck=await query("SELECT ((now() AT TIME ZONE $1)::date) AS today, (((now() AT TIME ZONE $1)::date)+14) AS max_date",[process.env.SCHOOL_TIMEZONE||"Africa/Johannesburg"]);
