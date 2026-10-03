@@ -65,6 +65,8 @@ export default function Availability(){
  const materialSrc=(m:any)=>"/api/lesson-materials/file?lessonId="+encodeURIComponent(selected?.id||"")+"&materialId="+encodeURIComponent(m.id);
  const isSameDay=(d:Date)=>fmtDate(d)===fmtDate(today);
 
+ async function submitLeave(){if(!selected||!leaveReason.trim()){setLeaveMessage("Reason for leave is required.");return}let documentData="",documentName="",documentMime="";if(leaveDoc){if(leaveDoc.size>8*1024*1024){setLeaveMessage("Supporting document must be under 8 MB.");return}documentData=await new Promise<string>((resolve,reject)=>{const fr=new FileReader();fr.onload=()=>resolve(String(fr.result));fr.onerror=reject;fr.readAsDataURL(leaveDoc)});documentName=leaveDoc.name;documentMime=leaveDoc.type}setLeaveMessage("Submitting…");const x=await fetch("/api/teacher-leave",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:selected.id,leaveType,reason:leaveReason,documentData,documentName,documentMime})});const j=await x.json();if(x.ok){setLeaveRequests(p=>[...p,j]);setShowLeave(false);setLeaveReason("");setLeaveDoc(null);setLeaveMessage("")}else setLeaveMessage(j.error||"Could not submit leave request.")}
+
  return <main className="main">
   <div className="booking-header">
    <div>
@@ -110,7 +112,7 @@ export default function Availability(){
         </button>
         :slot?<div className="open-slot">
           <div className="open-label">AVAILABLE</div>
-          <button className="cancel-slot" onClick={()=>cancelSlot(date,sa)} disabled={busy===key}>{busy===key?"…":"Close"}</button>
+          <div className="open-label">Students can book</div>
         </div>
         :!inWindow?<div className="closed-slot">Not open</div>
         :hasPassed?<div className="closed-slot">Passed</div>
@@ -122,7 +124,6 @@ export default function Availability(){
    </div>
   </div>
 
- async function submitLeave(){if(!selected||!leaveReason.trim()){setLeaveMessage("Reason for leave is required.");return}let documentData="",documentName="",documentMime="";if(leaveDoc){if(leaveDoc.size>8*1024*1024){setLeaveMessage("Supporting document must be under 8 MB.");return}documentData=await new Promise<string>((resolve,reject)=>{const fr=new FileReader();fr.onload=()=>resolve(String(fr.result));fr.onerror=reject;fr.readAsDataURL(leaveDoc)});documentName=leaveDoc.name;documentMime=leaveDoc.type}setLeaveMessage("Submitting…");const x=await fetch("/api/teacher-leave",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:selected.id,leaveType,reason:leaveReason,documentData,documentName,documentMime})});const j=await x.json();if(x.ok){setLeaveRequests(p=>[...p,j]);setShowLeave(false);setLeaveReason("");setLeaveDoc(null);setLeaveMessage("")}else setLeaveMessage(j.error||"Could not submit leave request.")}
   {selected&&<div className="class-modal-backdrop" onClick={()=>setSelected(null)}>
    <div className="class-modal" onClick={e=>e.stopPropagation()}>
     <div className="class-modal-head">
