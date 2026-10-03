@@ -183,20 +183,6 @@ export default function Dashboard() {
           )}
         </div>
 
-        {u.role === "STUDENT" && notifications.filter((n) => !n.read_at && String(n.title).toLowerCase().includes("cancel")).length > 0 ? (
-          <div className="section">
-            {notifications.filter((n) => !n.read_at && String(n.title).toLowerCase().includes("cancel")).map((n) => (
-              <div key={n.id} className="card" style={{ border: "2px solid #ef4444", background: "#fff1f2", marginBottom: 12 }}>
-                <h2 style={{ marginTop: 0, color: "#b91c1c" }}>Class cancelled</h2>
-                <p><strong>{n.message}</strong></p>
-                <Link className="primary" href={n.link || "/dashboard/book"} onClick={() => fetch("/api/notifications", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "markRead", notificationId: n.id }) })}>
-                  Please rebook
-                </Link>
-              </div>
-            ))}
-          </div>
-        ) : null}
-
         <div className="section">
           <h2>{u.role === "TEACHER" ? "My Sessions" : "Lessons"}</h2>
           <table className="table">
@@ -227,7 +213,7 @@ export default function Dashboard() {
                     <td>{l.teacher_name}</td>
                     <td>{l.student_name}</td>
                     <td>
-                      <span className="badge">{l.status === "CANCELLED" ? "CANCELLED — PLEASE REBOOK" : l.status}</span>
+                      <span className="badge">{l.status === "CANCELLED" ? "CANCELLED" : l.status}</span>
                     </td>
                     <td>
                       {l.status === "CANCELLED" && u.role === "STUDENT" ? (
