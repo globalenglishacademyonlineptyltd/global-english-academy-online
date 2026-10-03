@@ -19,29 +19,31 @@ export async function GET(req:Request){
   const s=await requireRole(["ADMIN","TEACHER","STUDENT"]); await ensureTable();
   const u=new URL(req.url),start=u.searchParams.get("start"),end=u.searchParams.get("end"),teacher=u.searchParams.get("teacher");
   if(s.role==="ADMIN"){
-    const vals:any[]=[]; let where="l.status<>'CANCELLED' AND l.ends_at<=now()";
+    const vals:any[]=[]; let where="r.rating IS NOT NULL AND l.status<>'CANCELLED' AND l.ends_at<=now()";
     if(start){vals.push(start+" 00:00:00");where+=" AND l.starts_at >= $"+vals.length}
     if(end){vals.push(end+" 23:59:59.999");where+=" AND l.starts_at <= $"+vals.length}
     if(teacher){vals.push(teacher);where+=" AND l.teacher_id=$"+vals.length}
     const rows=await query(`SELECT r.id,r.lesson_id,l.class_id,l.starts_at,l.ends_at,
       st.full_name student_name,t.full_name teacher_name,r.rating,r.opinion,r.created_at,
       rec.storage_url recording_url
-      FROM teacher_ratings r
-      JOIN lessons l ON l.id=r.lesson_id
-      JOIN users t ON t.id=l.teacher_id
-      JOIN users st ON st.id=l.student_id
+      FROM teacher_ratings r JOIN lessons l ON l.id=r.lesson_id
+      JOIN users t ON t.id=l.teacher_id JOIN users st ON st.id=l.student_id
       LEFT JOIN recordings rec ON rec.lesson_id=l.id
-      WHERE ${where.replace("l.status<>'CANCELLED' AND l.ends_at<=now()","r.rating IS NOT NULL AND l.status<>'CANCELLED' AND l.ends_at<=now()")}
-      ORDER BY l.starts_at DESC LIMIT 500`,vals);
+      WHERE ${where} ORDER BY l.starts_at DESC LIMIT 500`,vals);
     const teachers=await query("SELECT id,full_name FROM users WHERE role='TEACHER' ORDER BY full_name",[]);
     return NextResponse.json({rows:rows.rows,teachers:teachers.rows});
   }
   if(s.role==="TEACHER"){
-    const vals:any[]=[s.id]; let where="r.teacher_id=$1";
+    const vals:any[]=[s.id]; let where="l.teacher_id=$1 AND l.status<>'CANCELLED' AND l.ends_at<=now()";
     if(start){vals.push(start+" 00:00:00");where+=" AND l.starts_at >= $"+vals.length}
     if(end){vals.push(end+" 23:59:59.999");where+=" AND l.starts_at <= $"+vals.length}
-    const stats=await query(`SELECT rating,COUNT(*)::int count FROM teacher_ratings r JOIN lessons l ON l.id=r.lesson_id WHERE ${where} GROUP BY rating ORDER BY rating`,vals);
-    const rows=await query(`SELECT r.id,r.lesson_id,r.rating,r.opinion,r.created_at,l.starts_at,l.ends_at,st.full_name student_name,l.class_id FROM teacher_ratings r JOIN lessons l ON l.id=r.lesson_id JOIN users st ON st.id=l.student_id WHERE ${where} ORDER BY l.starts_at DESC`,vals);
+    const stats=await query(`SELECT r.rating,COUNT(*)::int count FROM teacher_ratings r
+      JOIN lessons l ON l.id=r.lesson_id WHERE r.teacher_id=$1 GROUP BY r.rating ORDER BY r.rating`,[s.id]);
+    const rows=await query(`SELECT l.id lesson_id,l.class_id,l.starts_at,l.ends_at,st.full_name student_name,
+      r.id rating_id,COALESCE(r.rating,0)::int rating,r.opinion
+      FROM lessons l JOIN users st ON st.id=l.student_id
+      LEFT JOIN teacher_ratings r ON r.lesson_id=l.id
+      WHERE ${where} ORDER BY l.starts_at DESC LIMIT 500`,vals);
     const trend=await query(`SELECT
       COALESCE(AVG(r.rating) FILTER(WHERE r.created_at>=date_trunc('week',now())-interval '1 week' AND r.created_at<date_trunc('week',now())),0) prev_week,
       COALESCE(AVG(r.rating) FILTER(WHERE r.created_at>=date_trunc('week',now())),0) week,
