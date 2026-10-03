@@ -8,7 +8,7 @@ export async function GET(req:Request){
  if(!lesson.rowCount)return NextResponse.json({error:"Lesson not found."},{status:404});
  const l=lesson.rows[0];
  if(s.role!=="ADMIN"&&s.id!==l.teacher_id&&s.id!==l.student_id)return NextResponse.json({error:"Not authorized."},{status:403});
- const r=await query("SELECT m.id,m.title,m.description,m.level,m.content_data,m.mime_type,m.url,lm.lesson_id FROM lesson_materials lm JOIN materials m ON m.id=lm.material_id WHERE lm.lesson_id=$1 ORDER BY m.level,m.created_at",[lessonId]);
+ const r=await query("SELECT m.id,m.title,m.description,m.level,m.mime_type,lm.lesson_id,(m.url<>'') AS has_external_url,(m.content_data<>'') AS has_uploaded_file FROM lesson_materials lm JOIN materials m ON m.id=lm.material_id WHERE lm.lesson_id=$1 ORDER BY m.level,m.created_at",[lessonId]);
  return NextResponse.json(r.rows);
 }
 
