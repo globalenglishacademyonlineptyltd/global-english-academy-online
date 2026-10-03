@@ -38,7 +38,7 @@ export async function GET(req:Request){
     if(start){vals.push(start+" 00:00:00");where+=" AND l.starts_at >= $"+vals.length}
     if(end){vals.push(end+" 23:59:59.999");where+=" AND l.starts_at <= $"+vals.length}
     const stats=await query(`SELECT r.rating,COUNT(*)::int count FROM teacher_ratings r
-      JOIN lessons l ON l.id=r.lesson_id WHERE r.teacher_id=$1 GROUP BY r.rating ORDER BY r.rating`,[s.id]);
+      JOIN lessons l ON l.id=r.lesson_id WHERE ${where} AND r.rating IS NOT NULL GROUP BY r.rating ORDER BY r.rating`,vals);
     const rows=await query(`SELECT l.id lesson_id,l.class_id,l.starts_at,l.ends_at,st.full_name student_name,
       r.id rating_id,COALESCE(r.rating,0)::int rating,r.opinion
       FROM lessons l JOIN users st ON st.id=l.student_id
