@@ -18,7 +18,16 @@ export default function Dashboard() {
   const [students, setStudents] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
   const [cancellations, setCancellations] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
   const [submitting, setSubmitting] = useState<string | null>(null);
+
+  async function loadNotifications() {
+    if (u?.role !== "STUDENT") return;
+    try {
+      const x = await fetch("/api/notifications", { cache: "no-store" });
+      if (x.ok) setNotifications(await x.json());
+    } catch {}
+  }
 
   async function loadCancellationRequests() {
     if (u?.role !== "TEACHER" && u?.role !== "STUDENT") return;
@@ -53,8 +62,9 @@ export default function Dashboard() {
   useEffect(() => {
     if (u?.role !== "TEACHER" && u?.role !== "STUDENT") return;
     loadCancellationRequests();
+    loadNotifications();
 
-    const refresh = () => loadCancellationRequests();
+    const refresh = () => { loadCancellationRequests(); loadNotifications(); };
     window.addEventListener("pageshow", refresh);
     const timer = setInterval(refresh, 10000);
 
@@ -173,6 +183,20 @@ export default function Dashboard() {
           )}
         </div>
 
+        {u.role === "STUDENT" && notifications.filter((n) => !n.read_at && String(n.title).toLowerCase().includes("cancel")).length > 0 ? (
+          <div className="section">
+            {notifications.filter((n) => !n.read_at && String(n.title).toLowerCase().includes("cancel")).map((n) => (
+              <div key={n.id} className="card" style={{ border: "2px solid #ef4444", background: "#fff1f2", marginBottom: 12 }}>
+                <h2 style={{ marginTop: 0, color: "#b91c1c" }}>Class cancelled</h2>
+                <p><strong>{n.message}</strong></p>
+                <Link className="primary" href={n.link || "/dashboard/book"} onClick={() => fetch("/api/notifications", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "markRead", notificationId: n.id }) })}>
+                  Please rebook
+                </Link>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
         <div className="section">
           <h2>{u.role === "TEACHER" ? "My Sessions" : "Lessons"}</h2>
           <table className="table">
@@ -203,10 +227,12 @@ export default function Dashboard() {
                     <td>{l.teacher_name}</td>
                     <td>{l.student_name}</td>
                     <td>
-                      <span className="badge">{l.status}</span>
+                      <span className="badge">{l.status === "CANCELLED" ? "CANCELLED — PLEASE REBOOK" : l.status}</span>
                     </td>
                     <td>
-                      {l.status === "SCHEDULED" ? (
+                      {l.status === "CANCELLED" && u.role === "STUDENT" ? (
+                        <Link className="primary" href="/dashboard/book">Rebook lesson</Link>
+                      ) : l.status === "SCHEDULED" ? (
                         <>
                           <Link href={"/classroom/" + l.room_code}>Join</Link>
 
