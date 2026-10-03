@@ -2,7 +2,7 @@ import{NextResponse}from"next/server";import{query}from"@/lib/db";import{require
 
 export async function GET(){
   const s=await requireRole(["ADMIN","TEACHER","STUDENT"]);
-  let q="SELECT l.*,t.full_name teacher_name,st.full_name student_name FROM lessons l JOIN users t ON t.id=l.teacher_id JOIN users st ON st.id=l.student_id",v:any[]=[];
+  let q="SELECT l.*,t.full_name teacher_name,st.full_name student_name,coalesce(si.level,'Beginner') student_level,si.age student_age FROM lessons l JOIN users t ON t.id=l.teacher_id JOIN users st ON st.id=l.student_id LEFT JOIN students si ON si.user_id=st.id",v:any[]=[];
   if(s.role==="TEACHER"){q+=" WHERE l.teacher_id=$1";v=[s.id]}
   if(s.role==="STUDENT"){q+=" WHERE l.student_id=$1";v=[s.id]}
   q+=" ORDER BY l.starts_at DESC LIMIT 100";
