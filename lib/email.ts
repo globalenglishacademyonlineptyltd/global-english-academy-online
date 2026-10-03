@@ -1,32 +1,34 @@
-import nodemailer from "nodemailer";
-
-function transporter(){
-  const host=process.env.SMTP_HOST,port=Number(process.env.SMTP_PORT||587),user=process.env.SMTP_USER,pass=process.env.SMTP_PASS;
-  if(!host||!user||!pass)return null;
-  return nodemailer.createTransport({
-    host,
-    port,
-    secure:process.env.SMTP_SECURE==="true",
-    auth:{user,pass},
-    connectionTimeout:10000,
-    greetingTimeout:10000,
-    socketTimeout:15000,
-  });
-}
-
 const appUrl=()=>process.env.NEXT_PUBLIC_APP_URL||"";
-const from=()=>process.env.EMAIL_FROM||process.env.SMTP_USER||"Global English Academy";
+const from=()=>process.env.RESEND_FROM||process.env.EMAIL_FROM||"Global English Academy <onboarding@resend.dev>";
 
 export async function sendEmail(to:string,subject:string,text:string){
   if(!to)return false;
-  const t=transporter();
-  if(!t){
-    console.error("Email send skipped: SMTP is not configured.");
+  const key=process.env.RESEND_API_KEY;
+  if(!key){
+    console.error("Email send skipped: RESEND_API_KEY is not configured.");
     return false;
   }
   try{
-    await t.sendMail({from:from(),to,subject,text});
-    console.log("Email sent successfully to:",to);
+    const res=await fetch("https://api.resend.com/emails",{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        Authorization:"Bearer "+key,
+      },
+      body:JSON.stringify({
+        from:from(),
+        to:[to],
+        subject,
+        text,
+      }),
+      cache:"no-store",
+    });
+    const body=await res.text();
+    if(!res.ok){
+      console.error("Email send failed:",res.status,body);
+      return false;
+    }
+    console.log("Email sent successfully to:",to,body);
     return true;
   }catch(error){
     console.error("Email send failed:",error instanceof Error?error.message:String(error));
