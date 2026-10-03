@@ -102,6 +102,7 @@ export default function Dashboard() {
           ["Cancellation Requests", "/dashboard/cancellations"],
           ["Teacher Leave Requests", "/dashboard/teacher-leave"],
           ["Teacher Availability", "/dashboard/teacher-availability"],
+          ["Teacher Score", "/dashboard/teacher-score"],
           ["Materials", "/dashboard/materials"],
           ["Recordings", "/dashboard/recordings"],
           ["School Branding", "/dashboard/branding"],
