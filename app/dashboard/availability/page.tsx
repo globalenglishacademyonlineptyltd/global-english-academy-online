@@ -113,6 +113,9 @@ export default function Availability(){
         :slot?<div className="open-slot">
           <div className="open-label">AVAILABLE</div>
           <div className="open-label">Students can book</div>
+          <button type="button" className="cancel-slot" onClick={()=>cancelSlot(date,sa)} disabled={busy===key}>
+            {busy===key?"Cancelling…":"Cancel slot"}
+          </button>
         </div>
         :!inWindow?<div className="closed-slot">Not open</div>
         :hasPassed?<div className="closed-slot">Passed</div>
