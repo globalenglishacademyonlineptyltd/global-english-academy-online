@@ -33,7 +33,18 @@ export async function getSession():Promise<SessionUser|null>{
   if(!token)return null;
   try{
     const {payload}=await jwtVerify(token,secret);
-    return {id:String(payload.id),email:String(payload.email),name:String(payload.name),role:payload.role as SessionUser["role"],mustChangePassword:payload.mustChangePassword===true||payload.mustChangePassword==="true"};
+    const id=String(payload.id);
+    const r=await query<any>("SELECT id,email,full_name name,role,active,deleted_at,must_change_password FROM users WHERE id=$1",[id]);
+    if(!r.rowCount)return null;
+    const user=r.rows[0];
+    if(user.deleted_at||user.active===false)return null;
+    return {
+      id:String(user.id),
+      email:String(user.email),
+      name:String(user.name),
+      role:user.role as SessionUser["role"],
+      mustChangePassword:user.must_change_password===true
+    };
   }catch{return null;}
 }
 
