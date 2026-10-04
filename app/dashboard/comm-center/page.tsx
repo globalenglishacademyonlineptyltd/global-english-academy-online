@@ -6,7 +6,7 @@ type User = { id:string; name:string; email:string; role:"ADMIN"|"TEACHER"|"STUD
 type Message = { id:string; title:string; message:string; link?:string; audience?:string; read_at?:string|null; created_at:string; recipient_name?:string; recipient_email?:string };
 
 const adminNav = [
-  ["Dashboard","/dashboard"],["Teachers","/dashboard/teachers"],["Students","/dashboard/students"],["Lessons","/dashboard/lessons"],
+  ["Dashboard","/dashboard"],["Teachers","/dashboard/teachers"],["Students","/dashboard/students"],["Deleted Teachers","/dashboard/deleted-teachers"],["Deleted Students","/dashboard/deleted-students"],["Lessons","/dashboard/lessons"],
   ["Cancellation Requests","/dashboard/cancellations"],["Teacher Leave Requests","/dashboard/teacher-leave"],["Teacher Availability","/dashboard/teacher-availability"],
   ["Teacher Score","/dashboard/teacher-score"],["Materials","/dashboard/materials"],["Recordings","/dashboard/recordings"],["School Branding","/dashboard/branding"],["Comm Centre","/dashboard/comm-center"]
 ];
