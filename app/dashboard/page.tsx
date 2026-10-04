@@ -116,6 +116,7 @@ export default function Dashboard() {
           ["Recordings", "/dashboard/recordings"],
           ["School Branding", "/dashboard/branding"],
           ["Comm Centre", "/dashboard/comm-center"],
+          ["Change Password", "/change-password"],
         ]
       : u.role === "TEACHER"
         ? [
