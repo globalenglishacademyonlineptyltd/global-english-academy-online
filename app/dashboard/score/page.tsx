@@ -1,10 +1,11 @@
+import TeacherShell from "../_components/TeacherShell";
 "use client";
 import{useEffect,useState}from"react";
 export default function Score(){const[rows,setRows]=useState<any[]>([]),[stats,setStats]=useState<any[]>([]),[trend,setTrend]=useState<any>({}),[start,setStart]=useState(""),[end,setEnd]=useState("");
 async function load(){const p=new URLSearchParams();if(start)p.set("start",start);if(end)p.set("end",end);const x=await fetch("/api/teacher-ratings?"+p.toString(),{cache:"no-store"});if(x.ok){const j=await x.json();setRows(j.rows||[]);setStats(j.stats||[]);setTrend(j.trend||{})}}
 useEffect(()=>{load()},[]);
 const counts=Array.from({length:10},(_,i)=>stats.find(s=>Number(s.rating)===i+1)?.count||0);
-return <main className="main"><div className="topbar"><div><h1>Score</h1><div className="muted">Student ratings of your teaching performance.</div></div><div style={{textAlign:"right"}}><div className="muted">Ratings</div><div style={{fontSize:28,fontWeight:800}}>{rows.length}</div></div></div>
+return <TeacherShell active="Score"><main className="teacher-page"><div className="topbar"><div><h1>Score</h1><div className="muted">Student ratings of your teaching performance.</div></div><div style={{textAlign:"right"}}><div className="muted">Ratings</div><div style={{fontSize:28,fontWeight:800}}>{rows.length}</div></div></div>
 <div className="card section"><h3>Total Statistical</h3><table className="table"><thead><tr>{counts.map((_,i)=><th key={i} style={{textAlign:"center"}}>{i+1}</th>)}</tr></thead><tbody><tr>{counts.map((n,i)=><td key={i} style={{textAlign:"center"}}>{n}</td>)}</tr></tbody></table>
 <h3 style={{marginTop:24}}>Trend</h3><table className="table"><thead><tr><th>Prev Week</th><th>Week</th><th>Prev Month</th><th>Month</th></tr></thead><tbody><tr><td>{Number(trend.prev_week||0).toFixed(2)}</td><td>{Number(trend.week||0).toFixed(2)}</td><td>{Number(trend.prev_month||0).toFixed(2)}</td><td>{Number(trend.month||0).toFixed(2)}</td></tr></tbody></table></div>
 <div className="card section"><div style={{display:"grid",gridTemplateColumns:"1fr 1fr auto",gap:12,alignItems:"end"}}><label>Start Date<input className="input" type="date" value={start} onChange={e=>setStart(e.target.value)}/></label><label>End Date<input className="input" type="date" value={end} onChange={e=>setEnd(e.target.value)}/></label><button className="primary" onClick={load} disabled={!!(start&&end&&end<start)}>Filter</button></div></div>
