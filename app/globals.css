@@ -141,7 +141,7 @@ body{background:#f5f8fc}
 
 
 /* Interactive 51Talk-inspired classroom */
-.gea-classroom{min-height:100vh;background:#eaf0f7;color:#162033;font-family:Inter,Arial,sans-serif;display:flex;flex-direction:column;overflow:hidden}
+.gea-classroom{--school-primary:#2563eb;--school-secondary:#0f172a;--school-accent:#f59e0b;min-height:100vh;background:#eaf0f7;color:#162033;font-family:Inter,Arial,sans-serif;display:flex;flex-direction:column;overflow:hidden}
 .gea-classroom *{box-sizing:border-box}
 .classroom-loading,.classroom-error{min-height:100vh;display:grid;place-items:center;background:#f6f8fb;color:#172033;font-family:Arial}
 .classroom-error>div{text-align:center;padding:30px}
