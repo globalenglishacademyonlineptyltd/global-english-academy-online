@@ -121,7 +121,6 @@ export default function Dashboard() {
             ["Teaching Record", "/dashboard/records"],
             ["Score", "/dashboard/score"],
             ["Booking Time", "/dashboard/availability"],
-            ["Score", "/dashboard/score"],
             ["Training", "/dashboard/training"],
             ["Comm Centre", "/dashboard/comm-center"],
             ["Personal Information", "/dashboard/profile"],
@@ -157,17 +156,28 @@ export default function Dashboard() {
           )}
         </div>
       ) : (
-        <aside className="sidebar">
-          <div className="brand">Global English Academy</div>
-          <nav className="nav">
-            {nav.map(([a, b]) => (
-              <Link key={b} href={b}>
-                {a}
-              </Link>
-            ))}
-            <button onClick={logout}>Sign out</button>
-          </nav>
-        </aside>
+        <div className={`role-menu-wrap ${u.role === "TEACHER" ? "teacher-role-menu" : "student-role-menu"}`}>
+          <button
+            className="role-menu-button"
+            onClick={() => setAdminMenuOpen((v) => !v)}
+            aria-expanded={adminMenuOpen}
+          >
+            <span className="role-menu-icon">☰</span>
+            <span>Menu</span>
+            <span className="role-menu-chevron">{adminMenuOpen ? "▲" : "▼"}</span>
+          </button>
+          {adminMenuOpen && (
+            <div className="role-dropdown">
+              <div className="role-dropdown-title">Global English Academy</div>
+              {nav.map(([a, b]) => (
+                <Link key={b} href={b} onClick={() => setAdminMenuOpen(false)}>
+                  {a}
+                </Link>
+              ))}
+              <button onClick={logout}>Sign out</button>
+            </div>
+          )}
+        </div>
       )}
 
       {u.role === "ADMIN" && branding?.logo_data && (
