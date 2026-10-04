@@ -31,6 +31,8 @@ export default function CommCenter(){
     const mj=await m.json();
     if(!mj.user){location.href="/login";return}
     setU(mj.user);
+    const b=await fetch("/api/branding",{cache:"no-store"});
+    if(b.ok){const bj=await b.json();setBranding(bj)}
     const n=await fetch("/api/notifications",{cache:"no-store"});
     if(n.ok){const j=await n.json();setItems(j.items||[])}
     if(mj.user.role==="ADMIN"){
