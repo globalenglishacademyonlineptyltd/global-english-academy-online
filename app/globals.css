@@ -89,3 +89,11 @@ body{background:#f5f8fc}
 .admin-shell .topbar h1{margin:0 0 9px;}
 .admin-shell .topbar .muted{text-transform:none;}
 @media(max-width:640px){.admin-shell .main{padding-top:104px}.admin-shell .topbar{margin-bottom:28px}}
+
+
+/* Consistent teacher/student portal header */
+.teacher-menu-shell .portal-header,.student-menu-shell .portal-header{justify-content:center;text-align:center;margin-bottom:30px;}
+.teacher-menu-shell .portal-header>div:first-child,.student-menu-shell .portal-header>div:first-child{width:100%;}
+.teacher-menu-shell .teacher-chip,.student-menu-shell .teacher-chip{position:absolute;right:28px;}
+.teacher-menu-shell .portal-content,.student-menu-shell .portal-content{padding-top:112px;}
+@media(max-width:640px){.teacher-menu-shell .portal-content,.student-menu-shell .portal-content{padding-top:104px}.teacher-menu-shell .portal-header,.student-menu-shell .portal-header{margin-bottom:28px}.teacher-menu-shell .teacher-chip,.student-menu-shell .teacher-chip{position:static;margin-top:10px;justify-content:center}.teacher-menu-shell .portal-header>div:first-child,.student-menu-shell .portal-header>div:first-child{width:auto}}
