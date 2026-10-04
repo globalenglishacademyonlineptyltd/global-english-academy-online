@@ -32,3 +32,8 @@ body{background:#f5f8fc}
 .admin-dropdown button{margin-top:4px;color:#b91c1c}.admin-dropdown button:hover{background:#fef2f2}
 .admin-shell .topbar{padding-left:125px}.admin-shell .badge{background:#efffd0;color:#4d7c0f}
 @media(max-width:640px){.admin-shell .main{padding:78px 16px 28px}.admin-menu-wrap{left:12px;top:12px}.admin-dropdown{width:min(245px,calc(100vw - 24px))}}
+
+/* Admin dashboard logo */
+.admin-brand-logo{display:flex;justify-content:center;align-items:center;margin:6px auto 16px;padding:0}
+.admin-brand-logo img{display:block;width:150px;height:150px;object-fit:contain;filter:drop-shadow(0 7px 14px rgba(15,23,42,.08))}
+@media(max-width:640px){.admin-brand-logo{margin:2px auto 12px}.admin-brand-logo img{width:138px;height:138px}}
