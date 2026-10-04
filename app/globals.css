@@ -65,10 +65,9 @@ body{background:#f5f8fc}
 .teacher-dropdown a,.teacher-dropdown button{display:block;width:100%;padding:10px 11px;border:0;border-radius:8px;background:transparent;color:#334155;text-align:left;font-size:12px;font-weight:650;text-decoration:none}
 .teacher-dropdown a:hover,.teacher-dropdown a.active{background:#f3e8ff;color:#6d28d9;box-shadow:inset 3px 0 0 #8b5cf6}
 .teacher-dropdown button{margin-top:4px;color:#b91c1c}.teacher-dropdown button:hover{background:#fef2f2}
-.teacher-menu-brand{display:flex;align-items:center;gap:9px;padding:12px 18px 8px 18px;color:#172033;font-size:13px}
-.teacher-menu-brand img{width:42px;height:42px;object-fit:contain;border-radius:9px;background:#fff;padding:2px}
-.teacher-menu-brand strong{display:block;font-size:13px}.teacher-menu-brand small{display:block;color:#64748b;font-size:9px;margin-top:2px}
-.teacher-menu-shell .portal-content{padding-top:2px}
+.teacher-menu-brand{position:absolute;left:18px;top:70px;width:82px;height:82px;display:flex;align-items:center;justify-content:center;padding:5px;background:rgba(255,255,255,.96);border:1px solid #ddd6fe;border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,.10);z-index:90}
+.teacher-menu-brand img{width:72px;height:72px;object-fit:contain;display:block;border-radius:8px;background:#fff;padding:1px}.teacher-menu-brand .brand-mark{width:72px;height:72px}
+.teacher-menu-shell .portal-content{padding-top:0}
 .teacher-menu-shell .portal-header{padding-left:28px}
 @media(max-width:640px){
   .role-menu-wrap{left:12px;top:12px}
@@ -77,6 +76,6 @@ body{background:#f5f8fc}
   .role-menu-wrap + .main{padding-top:76px}
   .teacher-menu-wrap{left:12px;top:12px}
   .teacher-dropdown{width:min(245px,calc(100vw - 24px))}
-  .teacher-menu-brand{left:12px;top:62px;width:72px;height:72px;padding:4px}.teacher-menu-brand img{width:64px;height:64px}
+  .teacher-menu-brand{left:12px;top:62px;width:72px;height:72px;padding:4px}.teacher-menu-brand img{width:64px;height:64px}.teacher-menu-brand .brand-mark{width:64px;height:64px}
   .teacher-menu-shell .portal-header{padding:14px 16px}
 }
