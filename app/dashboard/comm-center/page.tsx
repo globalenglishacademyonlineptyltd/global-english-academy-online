@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-type User = { id:string; name:string; email:string; role:"ADMIN"|"TEACHER"|"STUDENT"|"PARENT" };
+type User = { id:string; name:string; email:string; role:"ADMIN"|"TEACHER"|"STUDENT"|"PARENT"; active?:boolean };
 type Message = { id:string; title:string; message:string; link?:string; audience?:string; read_at?:string|null; created_at:string; recipient_name?:string; recipient_email?:string };
 
 const adminNav = [
@@ -26,6 +26,10 @@ export default function CommCenter(){
   const [openId,setOpenId]=useState<string|null>(null);
   const [adminMenuOpen,setAdminMenuOpen]=useState(false);
   const [branding,setBranding]=useState<any>(null);
+  const [search,setSearch]=useState("");
+  const [start,setStart]=useState("");
+  const [end,setEnd]=useState("");
+  const [filterApplied,setFilterApplied]=useState(false);
 
   async function load(){
     const m=await fetch("/api/me",{cache:"no-store"});
@@ -47,6 +51,17 @@ export default function CommCenter(){
   }
 
   useEffect(()=>{load()},[]);
+
+  function applyFilter(){setFilterApplied(true)}
+  function clearFilter(){setSearch("");setStart("");setEnd("");setFilterApplied(false)}
+  const visibleItems=filterApplied?items.filter(x=>{
+    const q=search.trim().toLowerCase();
+    const matchesSearch=!q||[x.title,x.message,x.recipient_name,x.recipient_email].filter(Boolean).some(v=>String(v).toLowerCase().includes(q));
+    const created=new Date(x.created_at).getTime();
+    const from=start?new Date(start+"T00:00:00").getTime():Number.NEGATIVE_INFINITY;
+    const to=end?new Date(end+"T23:59:59.999").getTime():Number.POSITIVE_INFINITY;
+    return matchesSearch&&created>=from&&created<=to;
+  }):items;
 
   async function send(){
     setError("");setSent("");
@@ -140,9 +155,11 @@ export default function CommCenter(){
 
         <section className="section">
           <h2>Sent Notifications</h2>
+          <p className="muted">Search by subject, message, recipient, or date range. All previous notifications remain visible until Filter is applied.</p>
+          <div className="card" style={{marginBottom:16}}><div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr auto auto",gap:12,alignItems:"end"}}><label>Search Notification<input className="input" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search subject, message, or recipient" /></label><label>Start Date<input className="input" type="date" value={start} onChange={e=>setStart(e.target.value)} /></label><label>End Date<input className="input" type="date" value={end} onChange={e=>setEnd(e.target.value)} /></label><button className="primary" type="button" onClick={applyFilter} disabled={!!start&&!!end&&end<start}>Filter</button><button type="button" onClick={clearFilter}>Clear</button></div></div>
           <table className="table"><thead><tr><th>Date & Time</th><th>Notification</th><th>Recipient</th></tr></thead><tbody>
-            {items.map(x=><tr key={x.id}><td>{new Date(x.created_at).toLocaleString()}</td><td><button onClick={()=>openMessage(x)} style={{background:"none",border:0,padding:0,cursor:"pointer",fontWeight:700,textAlign:"left"}}>{x.title}</button></td><td>{x.recipient_name||x.recipient_email||"—"}</td></tr>)}
-            {!items.length&&<tr><td colSpan={3}>No notifications sent yet.</td></tr>}
+            {visibleItems.map(x=><tr key={x.id}><td>{new Date(x.created_at).toLocaleString()}</td><td><button onClick={()=>openMessage(x)} style={{background:"none",border:0,padding:0,cursor:"pointer",fontWeight:700,textAlign:"left"}}>{x.title}</button></td><td>{x.recipient_name||x.recipient_email||"—"}</td></tr>)}
+            {!visibleItems.length&&<tr><td colSpan={3}>{filterApplied?"No notifications match the selected filter.":"No notifications sent yet."}</td></tr>}
           </tbody></table>
         </section>
       </main>
@@ -168,9 +185,10 @@ export default function CommCenter(){
       <section className="section">
         <h2>Notifications</h2>
         <p className="muted">Notifications from the Admin are read-only. You cannot reply or send messages.</p>
+        <div className="card" style={{marginBottom:16}}><div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr auto auto",gap:12,alignItems:"end"}}><label>Search Notification<input className="input" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search subject or message" /></label><label>Start Date<input className="input" type="date" value={start} onChange={e=>setStart(e.target.value)} /></label><label>End Date<input className="input" type="date" value={end} onChange={e=>setEnd(e.target.value)} /></label><button className="primary" type="button" onClick={applyFilter} disabled={!!start&&!!end&&end<start}>Filter</button><button type="button" onClick={clearFilter}>Clear</button></div></div>
         <table className="table"><thead><tr><th>Date & Time</th><th>Notification</th></tr></thead><tbody>
           {items.map(x=><tr key={x.id}><td>{new Date(x.created_at).toLocaleString()}</td><td><button onClick={()=>openMessage(x)} style={{background:"none",border:0,padding:0,cursor:"pointer",fontWeight:700,textAlign:"left"}}>{x.title}</button>{!x.read_at&&<span className="badge" style={{marginLeft:10}}>NEW</span>}</td></tr>)}
-          {!items.length&&<tr><td colSpan={2}>No notifications yet.</td></tr>}
+          {!visibleItems.length&&<tr><td colSpan={2}>{filterApplied?"No notifications match the selected filter.":"No notifications yet."}</td></tr>}
         </tbody></table>
       </section>
     </div>
