@@ -24,7 +24,8 @@ export default function CommCenter(){
   const [error,setError]=useState("");
   const [sent,setSent]=useState("");
   const [openId,setOpenId]=useState<string|null>(null);
-  const [adminMenuOpen,setAdminMenuOpen]=useState(false);\n  const [branding,setBranding]=useState<any>(null);
+  const [adminMenuOpen,setAdminMenuOpen]=useState(false);
+  const [branding,setBranding]=useState<any>(null);
 
   async function load(){
     const m=await fetch("/api/me",{cache:"no-store"});
