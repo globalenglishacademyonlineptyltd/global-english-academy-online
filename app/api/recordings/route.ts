@@ -22,9 +22,10 @@ export async function GET(req:Request){
  const lessonId=new URL(req.url).searchParams.get("lessonId");
  let sql="SELECT r.id,r.lesson_id,r.storage_url,r.duration_seconds,r.created_at,l.teacher_id,l.student_id,l.room_code,l.starts_at,t.full_name teacher_name,st.full_name student_name FROM recordings r JOIN lessons l ON l.id=r.lesson_id JOIN users t ON t.id=l.teacher_id JOIN users st ON st.id=l.student_id";
  const values:any[]=[];
- if(lessonId){sql+=" WHERE r.lesson_id=$1";values.push(lessonId);}
- else if(s.role==="TEACHER"){sql+=" WHERE l.teacher_id=$1";values.push(s.id);}
- else if(s.role==="STUDENT"){sql+=" WHERE l.student_id=$1";values.push(s.id);}
+ if(lessonId){sql+=" WHERE r.lesson_id=$1 AND t.deleted_at IS NULL AND st.deleted_at IS NULL";values.push(lessonId);}
+ else if(s.role==="TEACHER"){sql+=" WHERE l.teacher_id=$1 AND t.deleted_at IS NULL AND st.deleted_at IS NULL";values.push(s.id);}
+ else if(s.role==="STUDENT"){sql+=" WHERE l.student_id=$1 AND t.deleted_at IS NULL AND st.deleted_at IS NULL";values.push(s.id);}
+ else {sql+=" WHERE t.deleted_at IS NULL AND st.deleted_at IS NULL";}
  sql+=" ORDER BY r.created_at DESC LIMIT 100";
  const r=await query(sql,values);
  return NextResponse.json(r.rows);
