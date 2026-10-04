@@ -180,8 +180,8 @@ export default function Dashboard() {
         </div>
       )}
 
-      {u.role === "ADMIN" && branding?.logo_data && (
-        <div className="admin-brand-logo">
+      {branding?.logo_data && (
+        <div className={`role-brand-logo ${u.role === "ADMIN" ? "admin-role-logo" : u.role === "TEACHER" ? "teacher-role-logo" : "student-role-logo"}`}>
           <img src={branding.logo_data} alt="Global English Academy Online" />
         </div>
       )}
