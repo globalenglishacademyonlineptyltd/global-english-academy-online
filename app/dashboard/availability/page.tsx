@@ -1,5 +1,5 @@
-import TeacherShell from "../_components/TeacherShell";
 "use client";
+import TeacherShell from "../_components/TeacherShell";
 import {useEffect,useMemo,useState} from "react";
 import Link from "next/link";
 
@@ -168,4 +168,4 @@ export default function Availability(){
    <div className="material-viewer-body">{openMaterial.mime_type?.startsWith("image/")?<img src={materialSrc(openMaterial)} draggable={false} onContextMenu={e=>e.preventDefault()} />:<iframe title={openMaterial.title} src={materialSrc(openMaterial)+"#toolbar=0&navpanes=0&scrollbar=1"} sandbox="allow-same-origin allow-scripts" />}</div>
    <div className="material-viewer-note">School material • view only • downloading is not provided.</div>
   </div>}
- </main></main></TeacherShell>}
+ </main></TeacherShell>}
