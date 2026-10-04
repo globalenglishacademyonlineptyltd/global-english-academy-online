@@ -134,6 +134,7 @@ export default function Dashboard() {
             ["Lesson History", "/dashboard/records"],
             ["Rate Teachers", "/dashboard/rate-teachers"],
             ["Comm Centre", "/dashboard/comm-center"],
+            ["Change Password", "/change-password"],
           ];
 
   return (
