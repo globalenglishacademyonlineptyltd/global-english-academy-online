@@ -287,7 +287,7 @@ export default function Classroom(){
  if(error)return <main className="classroom-error"><div><h2>{error}</h2><button onClick={()=>router.replace("/dashboard")}>Back to Dashboard</button></div></main>;
  if(!lesson||!user)return <main className="classroom-loading">Loading classroom…</main>;
 
- return <main className="gea-classroom" style={{"--school-primary":branding?.primary_color||"#2563eb","--school-secondary":branding?.secondary_color||"#0f172a","--school-accent":branding?.accent_color||"#f59e0b"} as React.CSSProperties}>
+ return <main className="gea-classroom">
   <header className="gc-top">
    <div className="gc-brand">{branding?.logo_data?<img src={branding.logo_data} alt={branding.school_name}/>:<span className="gc-brand-icon">🎓</span>}<div><strong>{branding?.school_name||"Global English Academy"}</strong><small>{lesson.class_id||"Live Classroom"} • {lesson.student_name}</small></div></div>
    <div className="gc-status"><span className={connected?"gc-dot live":"gc-dot"}></span>{connected?"Connected":"Waiting for partner…"}</div>
