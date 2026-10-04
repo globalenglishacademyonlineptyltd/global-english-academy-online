@@ -20,7 +20,7 @@ export default function Dashboard() {
   const [cancellations, setCancellations] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [submitting, setSubmitting] = useState<string | null>(null);
-  const [adminMenuOpen, setAdminMenuOpen] = useState(false);
+  const [adminMenuOpen, setAdminMenuOpen] = useState(false);\n  const [branding, setBranding] = useState<any>(null);
 
   async function loadNotifications() {
     if (u?.role !== "STUDENT") return;
@@ -39,7 +39,7 @@ export default function Dashboard() {
   }
 
   useEffect(() => {
-    fetch("/api/me")
+    fetch("/api/branding", { cache: "no-store" })\n      .then((x) => (x.ok ? x.json() : null))\n      .then(setBranding)\n      .catch(() => {});\n\n    fetch("/api/me")
       .then((x) => x.json())
       .then((j) => {
         if (!j.user) location.href = "/login";
