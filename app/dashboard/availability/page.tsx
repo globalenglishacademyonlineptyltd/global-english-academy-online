@@ -1,3 +1,4 @@
+import TeacherShell from "../_components/TeacherShell";
 "use client";
 import {useEffect,useMemo,useState} from "react";
 import Link from "next/link";
@@ -67,7 +68,7 @@ export default function Availability(){
 
  async function submitLeave(){if(!selected||!leaveReason.trim()){setLeaveMessage("Reason for leave is required.");return}let documentData="",documentName="",documentMime="";if(leaveDoc){if(leaveDoc.size>8*1024*1024){setLeaveMessage("Supporting document must be under 8 MB.");return}documentData=await new Promise<string>((resolve,reject)=>{const fr=new FileReader();fr.onload=()=>resolve(String(fr.result));fr.onerror=reject;fr.readAsDataURL(leaveDoc)});documentName=leaveDoc.name;documentMime=leaveDoc.type}setLeaveMessage("Submitting…");const x=await fetch("/api/teacher-leave",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:selected.id,leaveType,reason:leaveReason,documentData,documentName,documentMime})});const j=await x.json();if(x.ok){setLeaveRequests(p=>[...p,j]);setShowLeave(false);setLeaveReason("");setLeaveDoc(null);setLeaveMessage("")}else setLeaveMessage(j.error||"Could not submit leave request.")}
 
- return <main className="main">
+ return <TeacherShell active="Booking Time"><main className="teacher-page">
   <div className="booking-header">
    <div>
     <div className="eyebrow">TEACHER SCHEDULE</div>
@@ -167,5 +168,4 @@ export default function Availability(){
    <div className="material-viewer-body">{openMaterial.mime_type?.startsWith("image/")?<img src={materialSrc(openMaterial)} draggable={false} onContextMenu={e=>e.preventDefault()} />:<iframe title={openMaterial.title} src={materialSrc(openMaterial)+"#toolbar=0&navpanes=0&scrollbar=1"} sandbox="allow-same-origin allow-scripts" />}</div>
    <div className="material-viewer-note">School material • view only • downloading is not provided.</div>
   </div>}
- </main>
-}
+ </main></main></TeacherShell>}
