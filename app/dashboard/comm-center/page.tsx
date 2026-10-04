@@ -24,7 +24,7 @@ export default function CommCenter(){
   const [error,setError]=useState("");
   const [sent,setSent]=useState("");
   const [openId,setOpenId]=useState<string|null>(null);
-  const [adminMenuOpen,setAdminMenuOpen]=useState(false);
+  const [adminMenuOpen,setAdminMenuOpen]=useState(false);\n  const [branding,setBranding]=useState<any>(null);
 
   async function load(){
     const m=await fetch("/api/me",{cache:"no-store"});
@@ -99,7 +99,7 @@ export default function CommCenter(){
           <button onClick={logout}>Sign out</button>
         </div>}
       </div>
-      <div className="role-brand-logo admin-role-logo">{/* dashboard branding is loaded by the shared shell; keep this page layout clear */}</div>
+      <div className="role-brand-logo admin-role-logo">{branding?.logo_data&&<img src={branding.logo_data} alt="Global English Academy Online" />}</div>
       <main className="main">
         <div className="topbar"><div><h1>Comm Centre</h1><div className="muted">Admin communication centre</div></div><span className="badge">ADMIN</span></div>
 
@@ -159,7 +159,7 @@ export default function CommCenter(){
       {(u.role==="TEACHER"?[["My Session","/dashboard"],["Teaching Record","/dashboard/records"],["Score","/dashboard/score"],["Booking Time","/dashboard/availability"],["Training","/dashboard/training"],["Comm Centre","/dashboard/comm-center"],["Personal Information","/dashboard/profile"],["Change Password","/change-password"]]:[["My Lessons","/dashboard"],["Book a Lesson","/dashboard/book"],["Lesson History","/dashboard/records"],["Rate Teachers","/dashboard/rate-teachers"],["Comm Centre","/dashboard/comm-center"]]).map(([label,href])=><Link key={href} href={href} className={label==="Comm Centre"?"active":""} onClick={()=>setAdminMenuOpen(false)}>{label}</Link>)}
       <button onClick={logout}>Sign out</button>
     </div>}</div>
-    <div className="teacher-menu-brand"><div className="brand-mark">GEA</div></div>
+    <div className="teacher-menu-brand">{branding?.logo_data?<img src={branding.logo_data} alt="Global English Academy Online" />:<div className="brand-mark">GEA</div>}</div>
     <div className="portal-content">
       <header className="portal-header"><div><div className="portal-kicker">{u.role==="TEACHER"?"TEACHER PORTAL":"STUDENT PORTAL"}</div><h1>Comm Centre</h1></div><div className="teacher-chip"><span className="teacher-avatar">{u.name?.slice(0,1).toUpperCase()}</span><span><strong>{u.name}</strong><small>{u.email}</small></span></div></header>
       <section className="section">
