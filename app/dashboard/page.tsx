@@ -20,6 +20,7 @@ export default function Dashboard() {
   const [cancellations, setCancellations] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [submitting, setSubmitting] = useState<string | null>(null);
+  const [adminMenuOpen, setAdminMenuOpen] = useState(false);
 
   async function loadNotifications() {
     if (u?.role !== "STUDENT") return;
@@ -129,18 +130,39 @@ export default function Dashboard() {
           ];
 
   return (
-    <div className="shell">
-      <aside className="sidebar">
-        <div className="brand">Global English Academy</div>
-        <nav className="nav">
-          {nav.map(([a, b]) => (
-            <Link key={b} href={b}>
-              {a}
-            </Link>
-          ))}
-          <button onClick={logout}>Sign out</button>
-        </nav>
-      </aside>
+    <div className={`shell ${u.role === "ADMIN" ? "admin-shell" : ""}`}>
+      {u.role === "ADMIN" ? (
+        <div className="admin-menu-wrap">
+          <button className="admin-menu-button" onClick={() => setAdminMenuOpen((v) => !v)} aria-expanded={adminMenuOpen}>
+            <span className="admin-menu-icon">☰</span>
+            <span>Menu</span>
+            <span className="admin-menu-chevron">{adminMenuOpen ? "▲" : "▼"}</span>
+          </button>
+          {adminMenuOpen && (
+            <div className="admin-dropdown">
+              <div className="admin-dropdown-title">Global English Academy</div>
+              {nav.map(([a, b]) => (
+                <Link key={b} href={b} onClick={() => setAdminMenuOpen(false)}>
+                  {a}
+                </Link>
+              ))}
+              <button onClick={logout}>Sign out</button>
+            </div>
+          )}
+        </div>
+      ) : (
+        <aside className="sidebar">
+          <div className="brand">Global English Academy</div>
+          <nav className="nav">
+            {nav.map(([a, b]) => (
+              <Link key={b} href={b}>
+                {a}
+              </Link>
+            ))}
+            <button onClick={logout}>Sign out</button>
+          </nav>
+        </aside>
+      )}
 
       <main className="main">
         <div className="topbar">
