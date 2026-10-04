@@ -1,23 +1,175 @@
-"use client";import{useEffect,useRef,useState}from"react";import{useParams}from"next/navigation";
+"use client";
 
-const icons:any={donut:"🍩",star:"⭐",lollipop:"🍭"};
-function canJoin(starts:string){return Date.now()>=new Date(starts).getTime()-600000}
+import {useEffect,useRef,useState} from "react";
+import {useParams,useRouter} from "next/navigation";
 
-export default function Classroom(){const{room}=useParams<{room:string}>(),local=useRef<HTMLVideoElement>(null),remote=useRef<HTMLVideoElement>(null),pc=useRef<RTCPeerConnection|null>(null),[status,setStatus]=useState("Starting classroom…"),[recording,setRecording]=useState(false),[role,setRole]=useState(""),[rewards,setRewards]=useState<any[]>([]),[materials,setMaterials]=useState<any[]>([]),[openMaterial,setOpenMaterial]=useState<any>(null),[tool,setTool]=useState("pen"),[board,setBoard]=useState<any[]>([]),canvas=useRef<HTMLCanvasElement>(null),rec=useRef<MediaRecorder|null>(null),chunks=useRef<Blob[]>([]),last=useRef("1970-01-01T00:00:00Z"),lessonId=useRef<string>(""),started=useRef<number>(0),streamRef=useRef<MediaStream|null>(null);
+const GAMES=[
+ {id:"pick",title:"Picture Pick",prompt:"Click the correct animal.",items:["🐶 Dog","🐱 Cat","🐟 Fish","🦁 Lion"],answer:"🐶 Dog"},
+ {id:"sort",title:"Sort It",prompt:"Sort the animals into the correct group.",items:["🐶 Dog","🐱 Cat","🐟 Fish","🦈 Shark"],answer:"Land / Water"},
+ {id:"match",title:"Match It",prompt:"Match each word to its picture.",items:["SUN","☀️","APPLE","🍎"],answer:"Match"},
+ {id:"order",title:"Put in Order",prompt:"Put the story in the correct order.",items:["Wake up","Eat breakfast","Go to school","Go home"],answer:"Order"}
+];
+const ICONS:any={donut:"🍩",star:"⭐",lollipop:"🍭"};
 
-useEffect(()=>{let stop=false;async function start(){try{const me=await fetch("/api/me").then(x=>x.json());if(!me.user){location.href="/login";return}setRole(me.user.role);const lessons=await fetch("/api/lessons",{cache:"no-store"}).then(x=>x.ok?x.json():[]);const lesson=lessons.find((x:any)=>x.room_code===room);if(!lesson){setStatus("Lesson not found");return}if(!canJoin(lesson.starts_at)){setStatus("Classroom opens 10 minutes before the lesson");return}lessonId.current=lesson.id;if(me.user.role==="TEACHER"){const gate=await fetch("/api/classroom/access?room="+encodeURIComponent(room),{cache:"no-store"});if(!gate.ok){const gj=await gate.json().catch(()=>({}));setStatus("REPORT REQUIRED");window.alert(gj.error||"Please complete previous report/s first.");return}}const mm=await fetch("/api/lesson-materials?lessonId="+encodeURIComponent(lesson.id),{cache:"no-store"});if(mm.ok)setMaterials(await mm.json());const rr=await fetch("/api/rewards?lessonId="+encodeURIComponent(lesson.id),{cache:"no-store"});if(rr.ok)setRewards(await rr.json());const stream=await navigator.mediaDevices.getUserMedia({video:true,audio:true});streamRef.current=stream;if(local.current)local.current.srcObject=stream;const p=new RTCPeerConnection({iceServers:[{urls:"stun:stun.l.google.com:19302"}]});pc.current=p;stream.getTracks().forEach(t=>p.addTrack(t,stream));p.ontrack=e=>{if(remote.current)remote.current.srcObject=e.streams[0]};p.onicecandidate=e=>{if(e.candidate)send({type:"ice",candidate:e.candidate});};setStatus("Connected — recording started");startRec();}catch{setStatus("Camera and microphone permission required")}}async function poll(){if(stop)return;try{const x=await fetch("/api/classroom/signal?room="+encodeURIComponent(room)+"&after="+encodeURIComponent(last.current));if(x.ok){for(const row of await x.json()){last.current=row.created_at;const m=row.payload;try{if(m.type==="offer"){await pc.current?.setRemoteDescription(m.offer);const a=await pc.current?.createAnswer();if(a){await pc.current?.setLocalDescription(a);send({type:"answer",answer:a})}}else if(m.type==="answer")await pc.current?.setRemoteDescription(m.answer);else if(m.type==="ice")await pc.current?.addIceCandidate(m.candidate)}catch{}}}}catch{}setTimeout(poll,1200)}start();poll();return()=>{stop=true;rec.current?.stop();streamRef.current?.getTracks().forEach(t=>t.stop());pc.current?.close()}},[room]);
+export default function Classroom(){
+ const params:any=useParams();
+ const router=useRouter();
+ const room=String(params?.room||"");
+ const [me,setMe]=useState<any>(null),[lesson,setLesson]=useState<any>(null),[branding,setBranding]=useState<any>(null);
+ const [materials,setMaterials]=useState<any[]>([]),[rewards,setRewards]=useState<any[]>([]);
+ const [interactive,setInteractive]=useState(false),[game,setGame]=useState<any>(null),[score,setScore]=useState(0),[reward,setReward]=useState("");
+ const [connected,setConnected]=useState(false),[muted,setMuted]=useState(false),[camera,setCamera]=useState(true),[recording,setRecording]=useState(false),[recordTime,setRecordTime]=useState(0);
+ const [chat,setChat]=useState<any[]>([]),[chatText,setChatText]=useState(""),[showGames,setShowGames]=useState(false),[showLayout,setShowLayout]=useState(false),[openMaterial,setOpenMaterial]=useState<any>(null),[positions,setPositions]=useState<any>({teacher:{x:2,y:2,w:24},student:{x:74,y:2,w:24}});
+ const [loading,setLoading]=useState(true),[error,setError]=useState(""),[status,setStatus]=useState("Starting classroom…"),[ending,setEnding]=useState(false);
 
-useEffect(()=>{if(!lessonId.current)return;const i=setInterval(async()=>{const[r,m]=await Promise.all([fetch("/api/rewards?lessonId="+encodeURIComponent(lessonId.current),{cache:"no-store"}),fetch("/api/lesson-materials?lessonId="+encodeURIComponent(lessonId.current),{cache:"no-store"})]);if(r.ok)setRewards(await r.json());if(m.ok)setMaterials(await m.json())},3000);return()=>clearInterval(i)},[role]);
+ const localVideo=useRef<HTMLVideoElement|null>(null),remoteVideo=useRef<HTMLVideoElement|null>(null),localStream=useRef<MediaStream|null>(null),remoteStream=useRef<MediaStream|null>(null),peer=useRef<RTCPeerConnection|null>(null),after=useRef("1970-01-01T00:00:00.000Z"),seen=useRef<Set<string>>(new Set()),poller=useRef<any>(null),recorder=useRef<MediaRecorder|null>(null),recordChunks=useRef<Blob[]>([]),recordStarted=useRef<number>(0),canvas=useRef<HTMLCanvasElement|null>(null);
 
-async function send(payload:any){await fetch("/api/classroom/signal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({room,payload})})}
+ const teacher=me?.role==="TEACHER",student=me?.role==="STUDENT";
 
-function materialUrl(m:any){return "/api/lesson-materials/file?lessonId="+encodeURIComponent(lessonId.current)+"&materialId="+encodeURIComponent(m.id)}
-function addMark(kind:string){setBoard(v=>[...v,{kind,id:Date.now()}])}
-function clearBoard(){setBoard([])}
-async function giveReward(type:string){if(rewards.length>=15||!lessonId.current)return;const r=await fetch("/api/rewards",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:lessonId.current,rewardType:type})});const j=await r.json();if(r.ok)setRewards(v=>[...v,j]);else setStatus(j.error||"Could not give reward")}
+ const signal=async(payload:any)=>{try{await fetch("/api/classroom-signals",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({roomCode:room,payload})});}catch{}};
+ const broadcast=(extra:any={})=>{if(teacher)signal({type:"state",interactive,game,score,reward,positions,...extra});};
 
-function startRec(){if(rec.current||!canvas.current)return;const c=canvas.current,ctx=c.getContext("2d")!;c.width=960;c.height=540;let on=true;const frame=()=>{if(!on)return;ctx.fillStyle="#111827";ctx.fillRect(0,0,960,540);const v=remote.current&&remote.current.readyState>=2?remote.current:local.current!;if(v&&v.readyState>=2)ctx.drawImage(v,0,0,960,540);requestAnimationFrame(frame)};frame();const stream=c.captureStream(20);let mime="video/webm";if(!MediaRecorder.isTypeSupported(mime))mime="video/webm";const r=new MediaRecorder(stream,{mimeType:mime});chunks.current=[];started.current=Date.now();r.ondataavailable=e=>e.data.size&&chunks.current.push(e.data);r.onstop=async()=>{on=false;const blob=new Blob(chunks.current,{type:mime});const reader=new FileReader();reader.onloadend=async()=>{const data=String(reader.result||"");const res=await fetch("/api/recordings",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:lessonId.current,roomCode:room,durationSeconds:Math.round((Date.now()-started.current)/1000),mimeType:mime,data})});setStatus(res.ok?"Recording saved to lesson history":"Recording could not be saved")};reader.readAsDataURL(blob)};r.start();rec.current=r;setRecording(true)}
+ const createPeer=()=>{
+   if(peer.current)return peer.current;
+   const p=new RTCPeerConnection({iceServers:[{urls:"stun:stun.l.google.com:19302"},{urls:"stun:stun1.l.google.com:19302"}]});
+   peer.current=p;
+   if(localStream.current)localStream.current.getTracks().forEach(t=>p.addTrack(t,localStream.current as MediaStream));
+   p.onicecandidate=e=>{if(e.candidate)signal({type:"ice",candidate:e.candidate});};
+   p.ontrack=e=>{if(!remoteStream.current)remoteStream.current=new MediaStream();if(!remoteStream.current.getTracks().some(t=>t.id===e.track.id))remoteStream.current.addTrack(e.track);if(remoteVideo.current)remoteVideo.current.srcObject=remoteStream.current;};
+   p.onconnectionstatechange=()=>{setConnected(p.connectionState==="connected");setStatus(p.connectionState==="connected"?"Connected":"Waiting for partner…");};
+   return p;
+ };
 
-function stopRec(){rec.current?.stop();rec.current=null;setRecording(false)}
+ const sendOffer=async()=>{if(!teacher)return;const p=createPeer();try{const o=await p.createOffer();await p.setLocalDescription(o);await signal({type:"offer",description:p.localDescription});}catch{}};
 
-return <main className="main"><div className="topbar"><div><h1>Live English Classroom</h1><div className="muted">Room {room}</div></div><span className="badge">{status}</span></div><div style={{display:"grid",gridTemplateColumns:"1fr 320px",gap:16}}><div className="card"><video ref={remote} autoPlay playsInline style={{width:"100%",background:"#111827",borderRadius:12,minHeight:300}}/><video ref={local} autoPlay muted playsInline style={{width:180,marginTop:10,borderRadius:10}}/><canvas ref={canvas} width={960} height={540} style={{display:"none"}}/><div style={{marginTop:12,padding:10,borderRadius:8,background:recording?"#fee2e2":"#f3f4f6"}}>{recording?"🔴 Lesson recording is active":"Recording stopped"}</div>{role==="TEACHER"&&<div className="card" style={{marginTop:12}}><h3>Give Student a Reward</h3><p className="muted">{rewards.length}/15 rewards given</p><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{Object.entries(icons).map(([type,icon]:any)=><button key={type} disabled={rewards.length>=15} onClick={()=>giveReward(type)} style={{fontSize:24,padding:"8px 12px"}}>{icon}<div style={{fontSize:12}}>{type}</div></button>)}</div></div>}</div><div className="card"><h3>Lesson Materials</h3><button disabled={!materials.length} onClick={()=>materials.length&&setOpenMaterial(materials[0])} style={{fontSize:30,padding:"10px 16px",cursor:materials.length?"pointer":"not-allowed"}}>📁</button><p className="muted">{materials.length?`${materials.length} material${materials.length===1?"":"s"} allocated to this classroom`:"No lesson material has been allocated to this classroom yet."}</p>{materials.map((m:any)=><button key={m.id} onClick={()=>setOpenMaterial(m)} onContextMenu={e=>e.preventDefault()} style={{display:"block",width:"100%",textAlign:"left",marginTop:8,padding:"10px",borderRadius:8,border:"1px solid #e5e7eb",background:"#fff",cursor:"pointer"}}>📄 {m.title}</button>)}<h3 style={{marginTop:24}}>Student Rewards</h3><div style={{fontSize:42,letterSpacing:4}}>{rewards.map((r:any,i:number)=><span key={r.id||i}>{icons[r.reward_type]}</span>)}</div><p><strong>{rewards.length}/15</strong> rewards</p><p className="muted">Rewards appear here as the teacher gives them.</p><h3 style={{marginTop:24}}>Interactive Whiteboard</h3><div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>{["pen","line","rectangle","circle","text","eraser"].map(t=><button key={t} onClick={()=>setTool(t)} style={{padding:"6px 9px",borderRadius:6,border:"1px solid #cbd5e1",background:tool===t?"#e0e7ff":"#fff"}}>{t==="pen"?"✏️ Pen":t==="line"?"╱ Line":t==="rectangle"?"▭ Shape":t==="circle"?"◯ Circle":t==="text"?"T Text":"⌫ Erase"}</button>)}<button onClick={clearBoard} style={{padding:"6px 9px"}}>Clear</button></div><div onPointerDown={()=>addMark(tool)} style={{height:180,border:"2px solid #cbd5e1",borderRadius:8,background:"#fff",position:"relative",overflow:"hidden"}}>{board.map((b:any,i:number)=><span key={b.id} style={{position:"absolute",left:10+(i%8)*12+"%",top:20+(i%5)*25+"%",fontSize:24}}>{b.kind==="pen"?"✏️":b.kind==="line"?"╱":b.kind==="rectangle"?"▭":b.kind==="circle"?"◯":b.kind==="text"?"T":"⌫"}</span>)}</div><p className="muted">Teacher and student can use the whiteboard tools. The reward controls remain teacher-only.</p></div></div>{openMaterial&&<div onContextMenu={e=>e.preventDefault()} style={{position:"fixed",inset:0,zIndex:1000,background:"rgba(15,23,42,.92)",display:"flex",flexDirection:"column",padding:16}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",color:"#fff",marginBottom:10}}><strong>📄 {openMaterial.title}</strong><button onClick={()=>setOpenMaterial(null)} style={{padding:"8px 14px"}}>Close</button></div><div style={{flex:1,background:"#fff",borderRadius:10,overflow:"hidden"}}>{openMaterial.mime_type?.startsWith("image/")?<img src={materialUrl(openMaterial)} draggable={false} onContextMenu={e=>e.preventDefault()} style={{width:"100%",height:"100%",objectFit:"contain"}}/>:<iframe title={openMaterial.title} src={materialUrl(openMaterial)+"#toolbar=0&navpanes=0&scrollbar=1"} sandbox="allow-same-origin allow-scripts" style={{width:"100%",height:"100%",border:0}}/>}</div><div style={{color:"#cbd5e1",fontSize:12,textAlign:"center",paddingTop:8}}>View-only classroom material. Download controls are not provided.</div></div>}</main>}
+ const handleSignal=async(s:any)=>{
+   if(seen.current.has(s.id))return;seen.current.add(s.id);const x=s.payload||{};
+   if(x.type==="hello"){if(teacher)sendOffer();return;}
+   if(x.type==="state"&&student){setInteractive(!!x.interactive);setGame(x.game||null);setScore(Number(x.score)||0);setReward(x.reward||"");if(x.positions)setPositions(x.positions);return;}
+   if(x.type==="chat"){setChat(v=>v.concat([{name:x.name||"Classroom",text:x.text||""}]).slice(-80));return;}
+   const p=createPeer();
+   try{
+     if(x.type==="offer"&&student){await p.setRemoteDescription(x.description);const a=await p.createAnswer();await p.setLocalDescription(a);await signal({type:"answer",description:p.localDescription});}
+     else if(x.type==="answer"&&teacher)await p.setRemoteDescription(x.description);
+     else if(x.type==="ice"&&x.candidate)await p.addIceCandidate(x.candidate);
+   }catch{}
+ };
+
+ const poll=async()=>{
+   try{
+     const r=await fetch("/api/classroom-signals?roomCode="+encodeURIComponent(room)+"&after="+encodeURIComponent(after.current),{cache:"no-store"});
+     if(!r.ok)return;
+     const j=await r.json();
+     for(const s of j.signals||[]){after.current=s.created_at;if(s.sender_id!==j.userId)await handleSignal(s);}
+   }catch{}
+ };
+
+ useEffect(()=>{
+   let alive=true;
+   async function start(){
+     try{
+       const meRes=await fetch("/api/me").then(x=>x.json());if(!meRes.user){router.replace("/login");return;}
+       setMe(meRes.user);
+       const lessons=await fetch("/api/lessons",{cache:"no-store"}).then(x=>x.ok?x.json():[]);
+       const found=(lessons||[]).find((x:any)=>x.room_code===room);
+       if(!found){setError("Lesson not found.");setLoading(false);return;}
+       if(Date.now()<new Date(found.starts_at).getTime()-600000){setError("The classroom opens 10 minutes before the lesson.");setLoading(false);return;}
+       if(meRes.user.role==="TEACHER"){
+         const gate=await fetch("/api/classroom/access?room="+encodeURIComponent(room),{cache:"no-store"});
+         if(!gate.ok){const g=await gate.json().catch(()=>({}));setError(g.error||"Please complete the previous teaching report before entering.");setLoading(false);return;}
+       }
+       setLesson(found);
+       const b=await fetch("/api/branding",{cache:"no-store"}).then(x=>x.ok?x.json():null).catch(()=>null);setBranding(b);
+       const mm=await fetch("/api/lesson-materials?lessonId="+encodeURIComponent(found.id),{cache:"no-store"});if(mm.ok)setMaterials(await mm.json());
+       const rr=await fetch("/api/rewards?lessonId="+encodeURIComponent(found.id),{cache:"no-store"});if(rr.ok)setRewards(await rr.json());
+       const stream=await navigator.mediaDevices.getUserMedia({video:true,audio:true});if(!alive)return;
+       localStream.current=stream;if(localVideo.current)localVideo.current.srcObject=stream;
+       createPeer();setStatus("Connected — classroom ready");signal({type:"hello"});setLoading(false);
+       setTimeout(()=>startRecording(),400);
+     }catch{setStatus("Camera and microphone permission required");setLoading(false);}
+   }
+   start();poll();poller.current=setInterval(poll,700);
+   return()=>{alive=false;if(poller.current)clearInterval(poller.current);recorder.current?.stop();localStream.current?.getTracks().forEach(t=>t.stop());peer.current?.close();peer.current=null;};
+ },[room,router]);
+
+ useEffect(()=>{if(!recording)return;const t=setInterval(()=>{if(recordStarted.current)setRecordTime(Math.floor((Date.now()-recordStarted.current)/1000));},1000);return()=>clearInterval(t);},[recording]);
+
+ const startRecording=()=>{
+   if(recording||!lesson)return;
+   try{
+     if(!canvas.current)canvas.current=document.createElement("canvas");
+     const c=canvas.current,ctx=c.getContext("2d");if(!ctx)return;c.width=1280;c.height=720;
+     const draw=()=>{if(!recordStarted.current)return;ctx.fillStyle="#f4f7fb";ctx.fillRect(0,0,1280,720);ctx.fillStyle="#fff";ctx.fillRect(24,24,1232,672);ctx.fillStyle="#172033";ctx.font="bold 28px Arial";ctx.fillText(branding?.school_name||"Global English Academy",48,62);ctx.font="bold 34px Arial";ctx.fillText(game?.title||lesson.topic||"English Lesson",55,130);ctx.font="22px Arial";ctx.fillText(game?.prompt||"Live interactive English class",55,172);if(localVideo.current&&localVideo.current.readyState>=2)ctx.drawImage(localVideo.current,930,90,270,170);if(remoteVideo.current&&remoteVideo.current.readyState>=2)ctx.drawImage(remoteVideo.current,930,275,270,170);requestAnimationFrame(draw);};
+     const stream=c.captureStream(10);if(localStream.current?.getAudioTracks()[0])stream.addTrack(localStream.current.getAudioTracks()[0]);
+     const mime=MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")?"video/webm;codecs=vp9,opus":"video/webm";
+     const mr=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:800000});recordChunks.current=[];recordStarted.current=Date.now();
+     mr.ondataavailable=e=>{if(e.data.size)recordChunks.current.push(e.data);};
+     mr.onstop=()=>{stream.getTracks().forEach(t=>t.stop());const reader=new FileReader();reader.onloadend=()=>{fetch("/api/recordings",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:lesson.id,roomCode:room,durationSeconds:recordTime,mimeType:mime,data:reader.result})}).then(r=>setStatus(r.ok?"Recording saved":"Recording could not be saved")).catch(()=>setStatus("Recording could not be saved"));};reader.readAsDataURL(new Blob(recordChunks.current,{type:mime}));};
+     recorder.current=mr;setRecordTime(0);setRecording(true);mr.start(1000);draw();
+   }catch{setStatus("Recording is not supported in this browser.");}
+ };
+
+ const stopRecording=()=>{if(recorder.current)recorder.current.stop();recorder.current=null;recordStarted.current=0;setRecording(false);};
+
+ const endClass=async()=>{if(ending)return;setEnding(true);if(recording)stopRecording();try{await fetch("/api/classroom-complete",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:lesson?.id})});}catch{}router.replace("/dashboard");};
+
+ const startGame=(g:any)=>{if(!teacher)return;setGame(g);setInteractive(true);setScore(0);setReward("");setShowGames(false);broadcast({game:g,interactive:true,score:0,reward:""});};
+ const answer=(item:string)=>{if(!student||!interactive||!game)return;const ok=game.id==="pick"&&item===game.answer;const next=ok?score+1:score;setScore(next);setReward(ok?"⭐ Great job!":"Try again!");signal({type:"state",interactive,game,score:next,reward:ok?"⭐ Great job!":"Try again!",positions});};
+ const sendChat=()=>{const text=chatText.trim();if(!text)return;const name=me?.name||"User";setChat(v=>v.concat([{name,text}]).slice(-80));signal({type:"chat",name,text});setChatText("");};
+
+ const moveVideo=(who:"teacher"|"student",e:any)=>{
+   if(!teacher&&!(student&&who==="student"))return;
+   const parent=e.currentTarget.parentElement.getBoundingClientRect(),box=e.currentTarget.getBoundingClientRect(),dx=e.clientX-box.left,dy=e.clientY-box.top;
+   const move=(ev:any)=>{const x=clamp(((ev.clientX-parent.left-dx)/parent.width)*100,0,100-positions[who].w),y=clamp(((ev.clientY-parent.top-dy)/parent.height)*100,0,85);setPositions((v:any)=>({...v,[who]:{...v[who],x,y}}));};
+   const up=()=>{window.removeEventListener("pointermove",move);window.removeEventListener("pointerup",up);if(teacher)broadcast();};
+   window.addEventListener("pointermove",move);window.addEventListener("pointerup",up,{once:true});
+ };
+ const setLayout=(mode:string)=>{const p=mode==="roleplay"?{teacher:{x:4,y:62,w:27},student:{x:69,y:62,w:27}}:mode==="side"?{teacher:{x:3,y:3,w:21},student:{x:27,y:3,w:21}}:{teacher:{x:2,y:2,w:24},student:{x:74,y:2,w:24}};setPositions(p);if(teacher)broadcast({positions:p});setShowLayout(false);};
+ const giveReward=async(type:string)=>{if(!lesson||rewards.length>=15)return;const r=await fetch("/api/rewards",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:lesson.id,rewardType:type})});const j=await r.json();if(r.ok)setRewards(v=>v.concat([j]));};
+ const time=String(Math.floor(recordTime/60)).padStart(2,"0")+":"+String(recordTime%60).padStart(2,"0");
+ const material=materials[0];
+
+ if(loading)return <main className="classroom-loading">Loading classroom…</main>;
+ if(error)return <main className="classroom-error"><div><h2>{error}</h2><button onClick={()=>router.replace("/dashboard")}>Back to Dashboard</button></div></main>;
+
+ return <main className="gea-classroom">
+  <header className="gc-top">
+   <div className="gc-brand">{branding?.logo_data?<img src={branding.logo_data} alt={branding.school_name}/>:<span className="gc-brand-icon">🎓</span>}<div><strong>{branding?.school_name||"Global English Academy"}</strong><small>{lesson.class_id||"Live Classroom"} • {lesson.student_name}</small></div></div>
+   <div className="gc-status"><span className={connected?"gc-dot live":"gc-dot"}></span>{connected?"Connected":status}</div>
+   <div className="gc-actions">
+    <button className={muted?"active":""} onClick={()=>{const n=!muted;localStream.current?.getAudioTracks().forEach(t=>t.enabled=!n);setMuted(n);}}>🎙 {muted?"Unmute":"Mute"}</button>
+    <button className={!camera?"active":""} onClick={()=>{const n=!camera;localStream.current?.getVideoTracks().forEach(t=>t.enabled=n);setCamera(n);}}>📷 Camera</button>
+    <button className={recording?"active":""} onClick={recording?stopRecording:startRecording}>⏺ {recording?"Stop "+time:"Record"}</button>
+    <button onClick={()=>setShowGames(true)}>🎮 Games</button><button onClick={()=>setShowLayout(true)}>🎭 Role Play</button><button className="danger" onClick={endClass}>{ending?"Ending…":"End Class"}</button>
+   </div>
+  </header>
+
+  <div className="gc-body">
+   <section className="gc-main">
+    <div className="gc-stage">
+     <div className="gc-lessonbar"><strong>{lesson.topic||"English Lesson"}</strong><span>{interactive?"🟢 Interactive Mode ON":"Teaching Mode"} {recording?" • 🔴 Recording":""}</span></div>
+     <div className="gc-material"><div className="gc-placeholder"><div>📚</div><h2>{lesson.topic||"Let's learn English!"}</h2><p>{material?.title||"Choose a game or open your assigned lesson material from the side panel."}</p></div></div>
+     <div className="gc-video" style={{left:positions.teacher.x+"%",top:(positions.teacher.y+5)+"%",width:positions.teacher.w+"%"}} onPointerDown={e=>moveVideo("teacher",e)}><video ref={teacher?localVideo:remoteVideo} autoPlay playsInline muted={teacher}/><div className="gc-video-label">👩‍🏫 {lesson.teacher_name}</div></div>
+     <div className="gc-video" style={{left:positions.student.x+"%",top:(positions.student.y+5)+"%",width:positions.student.w+"%"}} onPointerDown={e=>moveVideo("student",e)}><video ref={teacher?remoteVideo:localVideo} autoPlay playsInline muted={student}/><div className="gc-video-label">🧒 {lesson.student_name}</div></div>
+     {game&&interactive&&<div className="gc-game-overlay"><div className="gc-game-card"><h2>{game.title}</h2><p>{game.prompt}</p><div className="gc-game-grid">{game.items.map((x:string)=><button className="gc-game-item" key={x} disabled={!student} onClick={()=>answer(x)}>{x}</button>)}</div>{reward&&<div className="gc-reward">{reward} {score?"Score: "+score:""}</div>}{teacher&&<button className="gc-close-activity" onClick={()=>{setInteractive(false);setGame(null);setReward("");broadcast({interactive:false,game:null,reward:""});}}>Close Activity</button>}</div></div>}
+     <div className="gc-stage-hint">Drag teacher/student cameras to reposition them during role-play.</div>
+    </div>
+    <div className="gc-tools"><button onClick={()=>setShowGames(true)}>🎮 Games</button><button className={interactive?"active":""} disabled={!teacher} onClick={()=>{const n=!interactive;setInteractive(n);broadcast({interactive:n});}}>🎯 {interactive?"Interactive ON":"Interactive OFF"}</button><button onClick={()=>setShowLayout(true)}>🎭 Move Cameras</button><button onClick={()=>material&&setOpenMaterial(material)}>📚 Materials</button><span className="tool-spacer"></span><button>‹</button><span className="page-count">Page 1</span><button>›</button></div>
+   </section>
+
+   <aside className="gc-right">
+    <div className="gc-right-head"><strong>Classroom Controls</strong><span>51Talk-inspired 1-to-1 interactive teaching</span></div>
+    <div className="gc-panel"><h3>Student Interaction</h3><div className="gc-control-row"><button className={interactive?"active":""} disabled={!teacher} onClick={()=>{const n=!interactive;setInteractive(n);broadcast({interactive:n});}}>{interactive?"🟢 ON":"⚪ OFF"}</button><button onClick={()=>setShowGames(true)}>🎮 Games</button></div></div>
+    <div className="gc-panel"><h3>Lesson</h3><strong>{lesson.topic||"English Lesson"}</strong><p>{lesson.student_name} • {lesson.student_level||"English"}{lesson.student_age?" • Age "+lesson.student_age:""}</p></div>
+    {teacher&&<div className="gc-panel"><h3>Student Rewards</h3><div className="gc-control-row">{Object.entries(ICONS).map(([type,icon]:any)=><button key={type} disabled={rewards.length>=15} onClick={()=>giveReward(type)} style={{fontSize:18}}>{icon}</button>)}</div><p>{rewards.length}/15 rewards</p></div>}
+    <div className="gc-chat"><div className="gc-chat-list">{chat.length===0?<div className="empty-chat">Class chat is ready.</div>:chat.map((m,i)=><div className="gc-msg" key={i}><strong>{m.name}</strong>{m.text}</div>)}</div><div className="gc-chat-input"><input value={chatText} onChange={e=>setChatText(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")sendChat();}} placeholder="Message…"/><button onClick={sendChat}>Send</button></div></div>
+   </aside>
+  </div>
+
+  {showGames&&<div className="gc-modal-backdrop" onClick={()=>setShowGames(false)}><div className="gc-modal" onClick={e=>e.stopPropagation()}><div className="gc-modal-head"><h2>Interactive Activities</h2><button onClick={()=>setShowGames(false)}>Close</button></div><p>Students can click and participate only when Interactive Mode is ON.</p><div className="gc-modal-grid">{GAMES.map(g=><button key={g.id} disabled={!teacher} onClick={()=>startGame(g)}><strong>{g.title}</strong><span>{g.prompt}</span></button>)}</div></div></div>}
+
+  {showLayout&&<div className="gc-modal-backdrop" onClick={()=>setShowLayout(false)}><div className="gc-modal" onClick={e=>e.stopPropagation()}><div className="gc-modal-head"><h2>Role-play Camera Layout</h2><button onClick={()=>setShowLayout(false)}>Close</button></div><p>Use a preset or drag the camera windows directly on the lesson stage.</p><div className="gc-layout-buttons"><button onClick={()=>setLayout("normal")}>Normal Corners</button><button onClick={()=>setLayout("roleplay")}>Role Play</button><button onClick={()=>setLayout("side")}>Side by Side</button></div></div></div>}
+
+  {openMaterial&&<div className="gc-modal-backdrop" onContextMenu={e=>e.preventDefault()}><div className="gc-material-modal"><div className="gc-modal-head"><h2>📄 {openMaterial.title}</h2><button onClick={()=>setOpenMaterial(null)}>Close</button></div><div className="gc-material-frame"><iframe title={openMaterial.title} src={"/api/lesson-materials/file?lessonId="+encodeURIComponent(lesson.id)+"&materialId="+encodeURIComponent(openMaterial.id)+"#toolbar=0"} sandbox="allow-same-origin allow-scripts"/></div><p>View-only classroom material.</p></div></div>}
+ </main>;
+}
