@@ -106,6 +106,7 @@ export default function Dashboard() {
           ["Materials", "/dashboard/materials"],
           ["Recordings", "/dashboard/recordings"],
           ["School Branding", "/dashboard/branding"],
+          ["Comm Centre", "/dashboard/comm-center"],
         ]
       : u.role === "TEACHER"
         ? [
@@ -114,12 +115,14 @@ export default function Dashboard() {
             ["Score", "/dashboard/score"],
             ["Booking Time", "/dashboard/availability"],
             ["Apply for Leave", "/dashboard/leave"],
+            ["Comm Centre", "/dashboard/comm-center"],
           ]
         : [
             ["My Lessons", "/dashboard"],
             ["Book a Lesson", "/dashboard/book"],
             ["Lesson History", "/dashboard/records"],
             ["Rate Teachers", "/dashboard/rate-teachers"],
+            ["Comm Centre", "/dashboard/comm-center"],
           ];
 
   return (
