@@ -105,6 +105,8 @@ export default function Dashboard() {
           ["Dashboard", "/dashboard"],
           ["Teachers", "/dashboard/teachers"],
           ["Students", "/dashboard/students"],
+          ["Deleted Teachers", "/dashboard/deleted-teachers"],
+          ["Deleted Students", "/dashboard/deleted-students"],
           ["Lessons", "/dashboard/lessons"],
           ["Cancellation Requests", "/dashboard/cancellations"],
           ["Teacher Leave Requests", "/dashboard/teacher-leave"],
