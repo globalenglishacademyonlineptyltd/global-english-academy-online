@@ -158,7 +158,7 @@ export default function Classroom(){
 
  useEffect(()=>{
    if(!lesson||!user)return;
-   fetch("/api/materials",{cache:"no-store"}).then(r=>r.ok?r.json():[]).then(setMaterials).catch(()=>{});
+   fetch("/api/lesson-materials?lessonId="+encodeURIComponent(lesson.id),{cache:"no-store"}).then(r=>r.ok?r.json():[]).then(setMaterials).catch(()=>{});
  },[lesson,user]);
 
  useEffect(()=>{
