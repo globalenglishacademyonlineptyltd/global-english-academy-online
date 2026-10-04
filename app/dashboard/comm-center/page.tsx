@@ -27,6 +27,8 @@ export default function CommCenter(){
   const [adminMenuOpen,setAdminMenuOpen]=useState(false);
   const [branding,setBranding]=useState<any>(null);
   const [search,setSearch]=useState("");
+  const [adminTeacherFilter,setAdminTeacherFilter]=useState("");
+  const [adminStudentFilter,setAdminStudentFilter]=useState("");
   const [start,setStart]=useState("");
   const [end,setEnd]=useState("");
   const [filterApplied,setFilterApplied]=useState(false);
@@ -53,14 +55,16 @@ export default function CommCenter(){
   useEffect(()=>{load()},[]);
 
   function applyFilter(){setFilterApplied(true)}
-  function clearFilter(){setSearch("");setStart("");setEnd("");setFilterApplied(false)}
+  function clearFilter(){setSearch("");setAdminTeacherFilter("");setAdminStudentFilter("");setStart("");setEnd("");setFilterApplied(false)}
   const visibleItems=filterApplied?items.filter(x=>{
     const q=search.trim().toLowerCase();
     const matchesSearch=!q||[x.title,x.message,x.recipient_name,x.recipient_email].filter(Boolean).some(v=>String(v).toLowerCase().includes(q));
+    const matchesTeacher=!adminTeacherFilter||x.recipient_email===teachers.find(t=>t.id===adminTeacherFilter)?.email||x.recipient_name===teachers.find(t=>t.id===adminTeacherFilter)?.name;
+    const matchesStudent=!adminStudentFilter||x.recipient_email===students.find(s=>s.id===adminStudentFilter)?.email||x.recipient_name===students.find(s=>s.id===adminStudentFilter)?.name;
     const created=new Date(x.created_at).getTime();
     const from=start?new Date(start+"T00:00:00").getTime():Number.NEGATIVE_INFINITY;
     const to=end?new Date(end+"T23:59:59.999").getTime():Number.POSITIVE_INFINITY;
-    return matchesSearch&&created>=from&&created<=to;
+    return matchesSearch&&matchesTeacher&&matchesStudent&&created>=from&&created<=to;
   }):items;
 
   async function send(){
@@ -155,8 +159,8 @@ export default function CommCenter(){
 
         <section className="section">
           <h2>Sent Notifications</h2>
-          <p className="muted">Search by subject, message, recipient, or date range. All previous notifications remain visible until Filter is applied.</p>
-          <div className="card" style={{marginBottom:16}}><div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr auto auto",gap:12,alignItems:"end"}}><label>Search Notification<input className="input" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search subject, message, or recipient" /></label><label>Start Date<input className="input" type="date" value={start} onChange={e=>setStart(e.target.value)} /></label><label>End Date<input className="input" type="date" value={end} onChange={e=>setEnd(e.target.value)} /></label><button className="primary" type="button" onClick={applyFilter} disabled={!!start&&!!end&&end<start}>Filter</button><button type="button" onClick={clearFilter}>Clear</button></div></div>
+          <p className="muted">Select a teacher or student to view only that person’s notifications. You can also filter by date. All previous notifications remain visible until Filter is applied.</p>
+          <div className="card" style={{marginBottom:16}}><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr auto auto",gap:12,alignItems:"end"}}><label>Teacher<select className="input" value={adminTeacherFilter} onChange={e=>setAdminTeacherFilter(e.target.value)}><option value="">All teachers</option>{teachers.filter(x=>x.active!==false).map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label><label>Student<select className="input" value={adminStudentFilter} onChange={e=>setAdminStudentFilter(e.target.value)}><option value="">All students</option>{students.filter(x=>x.active!==false).map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label><label>Start Date<input className="input" type="date" value={start} onChange={e=>setStart(e.target.value)} /></label><label>End Date<input className="input" type="date" value={end} onChange={e=>setEnd(e.target.value)} /></label><button className="primary" type="button" onClick={applyFilter} disabled={!!start&&!!end&&end<start}>Filter</button><button type="button" onClick={clearFilter}>Clear</button></div></div>
           <table className="table"><thead><tr><th>Date & Time</th><th>Notification</th><th>Recipient</th></tr></thead><tbody>
             {visibleItems.map(x=><tr key={x.id}><td>{new Date(x.created_at).toLocaleString()}</td><td><button onClick={()=>openMessage(x)} style={{background:"none",border:0,padding:0,cursor:"pointer",fontWeight:700,textAlign:"left"}}>{x.title}</button></td><td>{x.recipient_name||x.recipient_email||"—"}</td></tr>)}
             {!visibleItems.length&&<tr><td colSpan={3}>{filterApplied?"No notifications match the selected filter.":"No notifications sent yet."}</td></tr>}
