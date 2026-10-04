@@ -128,3 +128,13 @@ body{background:#f5f8fc}
   .teacher-menu-shell .teacher-chip{position:static;margin-top:10px;justify-content:center;}
   .teacher-menu-shell .portal-header>div:first-child{width:auto;}
 }
+
+
+/* Match the Admin dashboard's vertical breathing room */
+.admin-shell .main{padding-top:112px;}
+.shell:not(.admin-shell) .main{padding-top:132px;}
+.teacher-menu-shell .portal-content{padding-top:132px;}
+@media(max-width:640px){
+  .shell:not(.admin-shell) .main{padding-top:116px;}
+  .teacher-menu-shell .portal-content{padding-top:116px;}
+}
