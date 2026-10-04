@@ -37,3 +37,45 @@ body{background:#f5f8fc}
 .admin-brand-logo{display:flex;justify-content:center;align-items:center;margin:6px auto 16px;padding:0}
 .admin-brand-logo img{display:block;width:150px;height:150px;object-fit:contain;filter:drop-shadow(0 7px 14px rgba(15,23,42,.08))}
 @media(max-width:640px){.admin-brand-logo{margin:2px auto 12px}.admin-brand-logo img{width:138px;height:138px}}
+
+/* Compact teacher/student dropdown navigation */
+.role-menu-wrap{position:absolute;left:18px;top:18px;z-index:200}
+.role-menu-button{display:flex;align-items:center;gap:9px;min-width:112px;padding:10px 13px;border-radius:10px;font-weight:850;box-shadow:0 5px 16px rgba(15,23,42,.12)}
+.teacher-role-menu .role-menu-button{background:#8b5cf6;color:#fff;border:1px solid #7c3aed}
+.teacher-role-menu .role-menu-button:hover{background:#7c3aed}
+.student-role-menu .role-menu-button{background:#2563eb;color:#fff;border:1px solid #1d4ed8}
+.student-role-menu .role-menu-button:hover{background:#1d4ed8}
+.role-menu-icon{font-size:17px;line-height:1}.role-menu-chevron{font-size:9px;margin-left:auto}
+.role-dropdown{position:absolute;left:0;top:48px;width:245px;background:#fff;border-radius:12px;padding:8px;overflow:hidden;box-shadow:0 18px 40px rgba(15,23,42,.18)}
+.teacher-role-menu .role-dropdown{border:1px solid #ddd6fe}
+.student-role-menu .role-dropdown{border:1px solid #bfdbfe}
+.role-dropdown-title{padding:9px 10px 10px;color:#172033;font-size:12px;font-weight:850;border-bottom:1px solid #eef2f7;margin-bottom:4px}
+.role-dropdown a,.role-dropdown button{display:block;width:100%;padding:10px 11px;border:0;border-radius:8px;background:transparent;color:#334155;text-align:left;font-size:12px;font-weight:650;text-decoration:none}
+.teacher-role-menu .role-dropdown a:hover,.teacher-role-menu .role-dropdown a.active{background:#f3e8ff;color:#6d28d9;box-shadow:inset 3px 0 0 #8b5cf6}
+.student-role-menu .role-dropdown a:hover,.student-role-menu .role-dropdown a.active{background:#eff6ff;color:#1d4ed8;box-shadow:inset 3px 0 0 #2563eb}
+.role-dropdown button{margin-top:4px;color:#b91c1c}.role-dropdown button:hover{background:#fef2f2}
+.role-menu-wrap + .main{padding-top:78px}
+.teacher-menu-shell{min-height:100vh;background:linear-gradient(135deg,#f7fbff 0%,#f5f8fc 55%,#fffaf2 100%);position:relative}
+.teacher-menu-wrap{position:absolute;left:18px;top:18px;z-index:200}
+.teacher-menu-button{display:flex;align-items:center;gap:9px;min-width:112px;padding:10px 13px;border-radius:10px;background:#8b5cf6;color:#fff;border:1px solid #7c3aed;font-weight:850;box-shadow:0 5px 16px rgba(139,92,246,.22)}
+.teacher-menu-button:hover{background:#7c3aed}
+.teacher-menu-icon{font-size:17px;line-height:1}.teacher-menu-chevron{font-size:9px;margin-left:auto}
+.teacher-dropdown{position:absolute;left:0;top:48px;width:245px;background:#fff;border:1px solid #ddd6fe;border-radius:12px;box-shadow:0 18px 40px rgba(15,23,42,.18);padding:8px;overflow:hidden}
+.teacher-dropdown-title{padding:9px 10px 10px;color:#172033;font-size:12px;font-weight:850;border-bottom:1px solid #eef2f7;margin-bottom:4px}
+.teacher-dropdown a,.teacher-dropdown button{display:block;width:100%;padding:10px 11px;border:0;border-radius:8px;background:transparent;color:#334155;text-align:left;font-size:12px;font-weight:650;text-decoration:none}
+.teacher-dropdown a:hover,.teacher-dropdown a.active{background:#f3e8ff;color:#6d28d9;box-shadow:inset 3px 0 0 #8b5cf6}
+.teacher-dropdown button{margin-top:4px;color:#b91c1c}.teacher-dropdown button:hover{background:#fef2f2}
+.teacher-menu-brand{display:flex;align-items:center;gap:9px;padding:12px 18px 8px 18px;color:#172033;font-size:13px}
+.teacher-menu-brand img{width:42px;height:42px;object-fit:contain;border-radius:9px;background:#fff;padding:2px}
+.teacher-menu-brand strong{display:block;font-size:13px}.teacher-menu-brand small{display:block;color:#64748b;font-size:9px;margin-top:2px}
+.teacher-menu-shell .portal-content{padding-top:2px}
+.teacher-menu-shell .portal-header{padding-left:28px}
+@media(max-width:640px){
+  .role-menu-wrap{left:12px;top:12px}
+  .role-dropdown{width:min(245px,calc(100vw - 24px))}
+  .role-menu-wrap + .main{padding-top:76px}
+  .teacher-menu-wrap{left:12px;top:12px}
+  .teacher-dropdown{width:min(245px,calc(100vw - 24px))}
+  .teacher-menu-brand{padding:62px 14px 8px}
+  .teacher-menu-shell .portal-header{padding:14px 16px}
+}
