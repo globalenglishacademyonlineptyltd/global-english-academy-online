@@ -97,3 +97,34 @@ body{background:#f5f8fc}
 .teacher-menu-shell .teacher-chip,.student-menu-shell .teacher-chip{position:absolute;right:28px;}
 .teacher-menu-shell .portal-content,.student-menu-shell .portal-content{padding-top:112px;}
 @media(max-width:640px){.teacher-menu-shell .portal-content,.student-menu-shell .portal-content{padding-top:104px}.teacher-menu-shell .portal-header,.student-menu-shell .portal-header{margin-bottom:28px}.teacher-menu-shell .teacher-chip,.student-menu-shell .teacher-chip{position:static;margin-top:10px;justify-content:center}.teacher-menu-shell .portal-header>div:first-child,.student-menu-shell .portal-header>div:first-child{width:auto}}
+
+
+/* Final portal header alignment and logo clearance */
+/* Student dashboard uses the shared shell/topbar, so match Admin exactly. */
+.shell:not(.admin-shell) .topbar{justify-content:center;text-align:center;margin-bottom:30px;}
+.shell:not(.admin-shell) .topbar>div:first-child{width:100%;}
+.shell:not(.admin-shell) .topbar .badge{display:none;}
+.role-menu-wrap + .main{padding-top:122px;}
+/* Keep the logo inside its own header zone so it cannot overlap dashboard cards. */
+.role-brand-logo{left:78px;top:14px;width:92px;height:92px;padding:5px;}
+.role-brand-logo img{width:82px;height:82px;}
+.teacher-menu-brand{left:78px;top:14px;width:92px;height:92px;padding:5px;}
+.teacher-menu-brand img,.teacher-menu-brand .brand-mark{width:82px;height:82px;}
+.teacher-menu-shell .portal-content{padding-top:122px;}
+.teacher-menu-shell .portal-header{justify-content:center;text-align:center;margin-bottom:30px;padding-left:28px;}
+.teacher-menu-shell .portal-header>div:first-child{width:100%;}
+.teacher-menu-shell .teacher-chip{position:absolute;right:28px;}
+@media(max-width:640px){
+  .shell:not(.admin-shell) .main{padding-top:106px;}
+  .shell:not(.admin-shell) .topbar{margin-bottom:28px;}
+  .role-menu-wrap + .main{padding-top:106px;}
+  .role-brand-logo{left:70px;top:10px;width:72px;height:72px;padding:4px;}
+  .role-brand-logo img{width:64px;height:64px;}
+  .teacher-menu-wrap{left:14px;top:14px;}
+  .teacher-menu-brand{left:70px;top:10px;width:72px;height:72px;padding:4px;}
+  .teacher-menu-brand img,.teacher-menu-brand .brand-mark{width:64px;height:64px;}
+  .teacher-menu-shell .portal-content{padding-top:106px;}
+  .teacher-menu-shell .portal-header{margin-bottom:28px;padding:14px 16px;}
+  .teacher-menu-shell .teacher-chip{position:static;margin-top:10px;justify-content:center;}
+  .teacher-menu-shell .portal-header>div:first-child{width:auto;}
+}
