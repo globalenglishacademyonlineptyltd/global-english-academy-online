@@ -1,20 +1,181 @@
 "use client";
-import TeacherShell from "../_components/TeacherShell";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
-import{useEffect,useState}from"react";
+type User = { id:string; name:string; email:string; role:"ADMIN"|"TEACHER"|"STUDENT"|"PARENT" };
+type Message = { id:string; title:string; message:string; link?:string; audience?:string; read_at?:string|null; created_at:string; recipient_name?:string; recipient_email?:string };
 
-type User={id:string;name:string;email:string;role:"ADMIN"|"TEACHER"|"STUDENT"|"PARENT"};
-type Message={id:string;title:string;message:string;link?:string;audience?:string;read_at?:string|null;created_at:string;recipient_name?:string;recipient_email?:string};
+const adminNav = [
+  ["Dashboard","/dashboard"],["Teachers","/dashboard/teachers"],["Students","/dashboard/students"],["Lessons","/dashboard/lessons"],
+  ["Cancellation Requests","/dashboard/cancellations"],["Teacher Leave Requests","/dashboard/teacher-leave"],["Teacher Availability","/dashboard/teacher-availability"],
+  ["Teacher Score","/dashboard/teacher-score"],["Materials","/dashboard/materials"],["Recordings","/dashboard/recordings"],["School Branding","/dashboard/branding"],["Comm Centre","/dashboard/comm-center"]
+];
 
 export default function CommCenter(){
- const[u,setU]=useState<User|null>(null),[items,setItems]=useState<Message[]>([]),[teachers,setTeachers]=useState<User[]>([]),[students,setStudents]=useState<User[]>([]);
- const[title,setTitle]=useState(""),[message,setMessage]=useState(""),[audience,setAudience]=useState("ALL"),[userIds,setUserIds]=useState<string[]>([]),[busy,setBusy]=useState(false),[error,setError]=useState(""),[sent,setSent]=useState("");
- async function load(){const m=await fetch("/api/me",{cache:"no-store"});const mj=await m.json();if(!mj.user){location.href="/login";return}setU(mj.user);const n=await fetch("/api/notifications",{cache:"no-store"});if(n.ok){const j=await n.json();setItems(j.items||[])}if(mj.user.role==="ADMIN"){const[t,s]=await Promise.all([fetch("/api/teachers",{cache:"no-store"}),fetch("/api/students",{cache:"no-store"})]);if(t.ok)setTeachers(await t.json());if(s.ok)setStudents(await s.json())}}
- useEffect(()=>{load()},[]);
- async function send(){setError("");setSent("");if(!title.trim()||!message.trim()){setError("Please enter a subject and message.");return}if(audience==="DIRECT"&&!userIds.length){setError("Please select at least one recipient.");return}setBusy(true);try{const r=await fetch("/api/notifications",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({title,message,audience,userIds})});const j=await r.json();if(!r.ok){setError(j.error||"Could not send message.");return}setTitle("");setMessage("");setUserIds([]);setSent("Message sent successfully to "+j.sent+" recipient"+(j.sent===1?"":"s")+".");await load()}catch{setError("Could not send message. Please try again.")}finally{setBusy(false)}}
- async function markRead(id:string){await fetch("/api/notifications",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"markRead",notificationId:id})});setItems(v=>v.map(x=>x.id===id?{...x,read_at:new Date().toISOString()}:x))}
- if(!u)return <main className="login"><div className="login-card">Loading…</div></main>;
- const isAdmin=u.role==="ADMIN";
- const recipients=audience==="TEACHERS"?teachers:audience==="STUDENTS"?students:[...teachers,...students];
- return <TeacherShell active="Comm Centre"><main className="teacher-page"><div className="topbar"><div><h1>Comm Centre</h1><div className="muted">{isAdmin?"Admin communication centre":"System Messages"}</div></div><span className="badge">{u.role}</span></div>
- {isAdmin?<><section className="section"><h2>Send announcement</h2><p className="muted">Only Admin can send messages. Teachers and students can read messages but cannot reply.</p><div className="card"><label>Send to</label><select value={audience} onChange={e=>{setAudience(e.target.value);setUserIds([])}}><option value="ALL">All teachers and students</option><option value="TEACHERS">All teachers</option><option value="STUDENTS">All students</option><option value="DIRECT">Specific teacher/student</option></select>{audience==="DIRECT"&&<div style={{marginTop:12}}><label>Recipients</label><select multiple value={userIds} onChange={e=>setUserIds(Array.from(e.target.selectedOptions).map(o=>o.value))} style={{minHeight:130}}>{recipients.map(x=><option key={x.id} value={x.id}>{x.name} — {x.email}</option>)}</select></div>}<label style={{display:"block",marginTop:12}}>Subject</label><input value={title} onChange={e=>setTitle(e.target.value)} placeholder="e.g. System Message" /><label style={{display:"block",marginTop:12}}>Message</label><textarea value={message} onChange={e=>setMessage(e.target.value)} rows={6} placeholder="Write your announcement…" /><div style={{display:"flex",gap:10,alignItems:"center",marginTop:12}}><button className="primary" disabled={busy} onClick={send}>{busy?"Sending…":"Send Message"}</button>{sent&&<span style={{color:"#15803d"}}>{sent}</span>}{error&&<span style={{color:"#b91c1c"}}>{error}</span>}</div></div></section><section className="section"><h2>Sent history</h2><table className="table"><thead><tr><th>Time</th><th>Subject</th><th>Audience</th><th>Recipient</th><th>Message</th></tr></thead><tbody>{items.map(x=><tr key={x.id}><td>{new Date(x.created_at).toLocaleString()}</td><td>{x.title}</td><td>{x.audience}</td><td>{x.recipient_name||x.recipient_email||"—"}</td><td>{x.message}</td></tr>)}{!items.length&&<tr><td colSpan={5}>No messages sent yet.</td></tr>}</tbody></table></section></>:<section className="section"><h2>System Message</h2><p className="muted">Messages from the Admin appear here. This section is read-only.</p><table className="table"><thead><tr><th>Time</th><th>Subject</th><th>Status</th><th></th></tr></thead><tbody>{items.map(x=><tr key={x.id}><td>{new Date(x.created_at).toLocaleString()}</td><td><strong>{x.title}</strong><div className="muted" style={{marginTop:6,whiteSpace:"pre-wrap"}}>{x.message}</div></td><td>{x.read_at?"Read":"Unread"}</td><td>{!x.read_at&&<button onClick={()=>markRead(x.id)}>Mark as read</button>}</td></tr>)}{!items.length&&<tr><td colSpan={4}>No system messages.</td></tr>}</tbody></table></section>}</main></TeacherShell>}
+  const [u,setU]=useState<User|null>(null);
+  const [items,setItems]=useState<Message[]>([]);
+  const [teachers,setTeachers]=useState<User[]>([]);
+  const [students,setStudents]=useState<User[]>([]);
+  const [teacherId,setTeacherId]=useState("");
+  const [studentId,setStudentId]=useState("");
+  const [title,setTitle]=useState("");
+  const [message,setMessage]=useState("");
+  const [busy,setBusy]=useState(false);
+  const [error,setError]=useState("");
+  const [sent,setSent]=useState("");
+  const [openId,setOpenId]=useState<string|null>(null);
+  const [adminMenuOpen,setAdminMenuOpen]=useState(false);
+
+  async function load(){
+    const m=await fetch("/api/me",{cache:"no-store"});
+    const mj=await m.json();
+    if(!mj.user){location.href="/login";return}
+    setU(mj.user);
+    const n=await fetch("/api/notifications",{cache:"no-store"});
+    if(n.ok){const j=await n.json();setItems(j.items||[])}
+    if(mj.user.role==="ADMIN"){
+      const [t,s]=await Promise.all([
+        fetch("/api/teachers",{cache:"no-store"}),
+        fetch("/api/students",{cache:"no-store"})
+      ]);
+      if(t.ok)setTeachers(await t.json());
+      if(s.ok)setStudents(await s.json());
+    }
+  }
+
+  useEffect(()=>{load()},[]);
+
+  async function send(){
+    setError("");setSent("");
+    const ids=[teacherId,studentId].filter(Boolean);
+    if(!ids.length){setError("Please select a teacher or a student.");return}
+    if(!title.trim()||!message.trim()){setError("Please enter a subject and message.");return}
+    setBusy(true);
+    try{
+      const r=await fetch("/api/notifications",{
+        method:"POST",
+        headers:{"content-type":"application/json"},
+        body:JSON.stringify({title,message,audience:"DIRECT",userIds:ids})
+      });
+      const j=await r.json();
+      if(!r.ok){setError(j.error||"Could not send notification.");return}
+      setTitle("");setMessage("");setTeacherId("");setStudentId("");
+      setSent("Notification sent successfully to "+j.sent+" recipient"+(j.sent===1?"":"s")+".");
+      await load();
+    }catch{setError("Could not send notification. Please try again.")}
+    finally{setBusy(false)}
+  }
+
+  async function openMessage(item:Message){
+    setOpenId(item.id);
+    if(!item.read_at){
+      await fetch("/api/notifications",{
+        method:"POST",
+        headers:{"content-type":"application/json"},
+        body:JSON.stringify({action:"markRead",notificationId:item.id})
+      });
+      setItems(v=>v.map(x=>x.id===item.id?{...x,read_at:new Date().toISOString()}:x));
+    }
+  }
+
+  async function logout(){
+    await fetch("/api/auth/logout",{method:"POST"});
+    location.href="/login";
+  }
+
+  if(!u)return <main className="login"><div className="login-card">Loading…</div></main>;
+
+  const opened=items.find(x=>x.id===openId)||null;
+
+  if(u.role==="ADMIN"){
+    return <div className="shell admin-shell">
+      <div className="admin-menu-wrap">
+        <button className="admin-menu-button" onClick={()=>setAdminMenuOpen(v=>!v)} aria-expanded={adminMenuOpen}>
+          <span className="admin-menu-icon">☰</span><span>Menu</span><span className="admin-menu-chevron">{adminMenuOpen?"▲":"▼"}</span>
+        </button>
+        {adminMenuOpen&&<div className="admin-dropdown">
+          <div className="admin-dropdown-title">Global English Academy</div>
+          {adminNav.map(([label,href])=><Link key={href} href={href} className={label==="Comm Centre"?"active":""} onClick={()=>setAdminMenuOpen(false)}>{label}</Link>)}
+          <button onClick={logout}>Sign out</button>
+        </div>}
+      </div>
+      <div className="role-brand-logo admin-role-logo">{/* dashboard branding is loaded by the shared shell; keep this page layout clear */}</div>
+      <main className="main">
+        <div className="topbar"><div><h1>Comm Centre</h1><div className="muted">Admin communication centre</div></div><span className="badge">ADMIN</span></div>
+
+        <section className="section">
+          <h2>Send Notification</h2>
+          <p className="muted">Only Admin can send notifications. Select a teacher, a student, or one of each.</p>
+          <div className="card">
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+              <div>
+                <label>Teacher</label>
+                <select value={teacherId} onChange={e=>setTeacherId(e.target.value)}>
+                  <option value="">Select a teacher</option>
+                  {teachers.filter(x=>x.active!==false).map(x=><option key={x.id} value={x.id}>{x.name} — {x.email}</option>)}
+                </select>
+              </div>
+              <div>
+                <label>Student</label>
+                <select value={studentId} onChange={e=>setStudentId(e.target.value)}>
+                  <option value="">Select a student</option>
+                  {students.filter(x=>x.active!==false).map(x=><option key={x.id} value={x.id}>{x.name} — {x.email}</option>)}
+                </select>
+              </div>
+            </div>
+            <label style={{display:"block",marginTop:16}}>Subject</label>
+            <input value={title} onChange={e=>setTitle(e.target.value)} placeholder="Enter notification subject" />
+            <label style={{display:"block",marginTop:16}}>Comment</label>
+            <textarea value={message} onChange={e=>setMessage(e.target.value)} rows={7} placeholder="Write the notification..." />
+            <div style={{display:"flex",gap:12,alignItems:"center",marginTop:16,flexWrap:"wrap"}}>
+              <button className="primary" disabled={busy} onClick={send}>{busy?"Sending…":"Send Notification"}</button>
+              {sent&&<span style={{color:"#15803d"}}>{sent}</span>}
+              {error&&<span style={{color:"#b91c1c"}}>{error}</span>}
+            </div>
+          </div>
+        </section>
+
+        <section className="section">
+          <h2>Sent Notifications</h2>
+          <table className="table"><thead><tr><th>Date & Time</th><th>Notification</th><th>Recipient</th></tr></thead><tbody>
+            {items.map(x=><tr key={x.id}><td>{new Date(x.created_at).toLocaleString()}</td><td><button onClick={()=>openMessage(x)} style={{background:"none",border:0,padding:0,cursor:"pointer",fontWeight:700,textAlign:"left"}}>{x.title}</button></td><td>{x.recipient_name||x.recipient_email||"—"}</td></tr>)}
+            {!items.length&&<tr><td colSpan={3}>No notifications sent yet.</td></tr>}
+          </tbody></table>
+        </section>
+      </main>
+
+      {opened&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.45)",display:"flex",alignItems:"center",justifyContent:"center",padding:20,zIndex:500}}>
+        <div className="card" style={{maxWidth:700,width:"100%"}}>
+          <div style={{display:"flex",justifyContent:"space-between",gap:16,alignItems:"start"}}><div><div className="muted">{new Date(opened.created_at).toLocaleString()}</div><h2 style={{marginTop:6}}>{opened.title}</h2></div><button onClick={()=>setOpenId(null)}>Close</button></div>
+          <div style={{marginTop:18,whiteSpace:"pre-wrap",lineHeight:1.6}}>{opened.message}</div>
+        </div>
+      </div>}
+    </div>
+  }
+
+  return <div className="teacher-menu-shell">
+    <div className="teacher-menu-wrap"><button className="teacher-menu-button" onClick={()=>setAdminMenuOpen(v=>!v)} aria-expanded={adminMenuOpen}><span className="teacher-menu-icon">☰</span><span>Menu</span><span className="teacher-menu-chevron">{adminMenuOpen?"▲":"▼"}</span></button>{adminMenuOpen&&<div className="teacher-dropdown">
+      <div className="teacher-dropdown-title">Global English Academy</div>
+      {(u.role==="TEACHER"?[["My Session","/dashboard"],["Teaching Record","/dashboard/records"],["Score","/dashboard/score"],["Booking Time","/dashboard/availability"],["Training","/dashboard/training"],["Comm Centre","/dashboard/comm-center"],["Personal Information","/dashboard/profile"],["Change Password","/change-password"]]:[["My Lessons","/dashboard"],["Book a Lesson","/dashboard/book"],["Lesson History","/dashboard/records"],["Rate Teachers","/dashboard/rate-teachers"],["Comm Centre","/dashboard/comm-center"]]).map(([label,href])=><Link key={href} href={href} className={label==="Comm Centre"?"active":""} onClick={()=>setAdminMenuOpen(false)}>{label}</Link>)}
+      <button onClick={logout}>Sign out</button>
+    </div>}</div>
+    <div className="teacher-menu-brand"><div className="brand-mark">GEA</div></div>
+    <div className="portal-content">
+      <header className="portal-header"><div><div className="portal-kicker">{u.role==="TEACHER"?"TEACHER PORTAL":"STUDENT PORTAL"}</div><h1>Comm Centre</h1></div><div className="teacher-chip"><span className="teacher-avatar">{u.name?.slice(0,1).toUpperCase()}</span><span><strong>{u.name}</strong><small>{u.email}</small></span></div></header>
+      <section className="section">
+        <h2>Notifications</h2>
+        <p className="muted">Notifications from the Admin are read-only. You cannot reply or send messages.</p>
+        <table className="table"><thead><tr><th>Date & Time</th><th>Notification</th></tr></thead><tbody>
+          {items.map(x=><tr key={x.id}><td>{new Date(x.created_at).toLocaleString()}</td><td><button onClick={()=>openMessage(x)} style={{background:"none",border:0,padding:0,cursor:"pointer",fontWeight:700,textAlign:"left"}}>{x.title}</button>{!x.read_at&&<span className="badge" style={{marginLeft:10}}>NEW</span>}</td></tr>)}
+          {!items.length&&<tr><td colSpan={2}>No notifications yet.</td></tr>}
+        </tbody></table>
+      </section>
+    </div>
+    {opened&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.45)",display:"flex",alignItems:"center",justifyContent:"center",padding:20,zIndex:500}}>
+      <div className="card" style={{maxWidth:700,width:"100%"}}>
+        <div style={{display:"flex",justifyContent:"space-between",gap:16,alignItems:"start"}}><div><div className="muted">{new Date(opened.created_at).toLocaleString()}</div><h2 style={{marginTop:6}}>{opened.title}</h2></div><button onClick={()=>setOpenId(null)}>Close</button></div>
+        <div style={{marginTop:18,whiteSpace:"pre-wrap",lineHeight:1.6}}>{opened.message}</div>
+      </div>
+    </div>}
+  </div>;
+}
