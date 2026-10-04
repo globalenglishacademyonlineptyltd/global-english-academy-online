@@ -111,11 +111,14 @@ export default function Dashboard() {
       : u.role === "TEACHER"
         ? [
             ["My Session", "/dashboard"],
-            ["Teaching History", "/dashboard/records"],
+            ["Teaching Record", "/dashboard/records"],
             ["Score", "/dashboard/score"],
             ["Booking Time", "/dashboard/availability"],
-            ["Apply for Leave", "/dashboard/leave"],
+            ["Score", "/dashboard/score"],
+            ["Training", "/dashboard/training"],
             ["Comm Centre", "/dashboard/comm-center"],
+            ["Personal Information", "/dashboard/profile"],
+            ["Change Password", "/change-password"],
           ]
         : [
             ["My Lessons", "/dashboard"],
