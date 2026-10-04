@@ -170,6 +170,12 @@ export default function Dashboard() {
         </aside>
       )}
 
+      {u.role === "ADMIN" && branding?.logo_data && (
+        <div className="admin-brand-logo">
+          <img src={branding.logo_data} alt="Global English Academy Online" />
+        </div>
+      )}
+
       <main className="main">
         <div className="topbar">
           <div>
