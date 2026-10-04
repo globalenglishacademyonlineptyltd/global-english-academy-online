@@ -21,17 +21,17 @@ body{background:#f5f8fc}
 /* Admin compact menu */
 .admin-shell{position:relative;display:block;min-height:100vh;background:#f5f8fc}
 .admin-shell .main{max-width:1500px;margin:0 auto;padding:24px 28px 40px}
-.admin-menu-wrap{position:absolute;left:18px;top:18px;z-index:100}
-.admin-menu-button{display:flex;align-items:center;gap:9px;min-width:112px;padding:10px 13px;border:1px solid #b7f34a;border-radius:10px;background:#c6ff32;color:#13210b;font-weight:850;box-shadow:0 5px 16px rgba(134,239,39,.2)}
+.admin-menu-wrap{position:absolute;left:18px;top:10px;z-index:100}
+.admin-menu-button{display:flex;align-items:center;justify-content:center;gap:0;width:42px;height:42px;min-width:42px;padding:0;border:1px solid #b7f34a;border-radius:10px;background:#c6ff32;color:#13210b;font-weight:850;box-shadow:0 5px 16px rgba(134,239,39,.2)}
 .admin-menu-button:hover{background:#b8f522}
-.admin-menu-icon{font-size:17px;line-height:1}.admin-menu-chevron{font-size:9px;margin-left:auto}
+.admin-menu-icon{font-size:22px;line-height:1}.admin-menu-button>span:not(.admin-menu-icon){display:none}
 .admin-dropdown{position:absolute;left:0;top:48px;width:245px;background:#fff;border:1px solid #dce6d0;border-radius:12px;box-shadow:0 18px 40px rgba(15,23,42,.16);padding:8px;overflow:hidden}
 .admin-dropdown-title{padding:9px 10px 10px;color:#13210b;font-size:12px;font-weight:850;border-bottom:1px solid #eef2e8;margin-bottom:4px}
 .admin-dropdown a,.admin-dropdown button{display:block;width:100%;padding:10px 11px;border:0;border-radius:8px;background:transparent;color:#334155;text-align:left;font-size:12px;font-weight:650;text-decoration:none}
 .admin-dropdown a:hover{background:#efffd0;color:#172033;box-shadow:inset 3px 0 0 #a3e635}
 .admin-dropdown button{margin-top:4px;color:#b91c1c}.admin-dropdown button:hover{background:#fef2f2}
-.admin-shell .topbar{padding-left:125px}.admin-shell .badge{background:#efffd0;color:#4d7c0f}
-@media(max-width:640px){.admin-shell .main{padding:78px 16px 28px}.admin-menu-wrap{left:12px;top:12px}.admin-dropdown{width:min(245px,calc(100vw - 24px))}}
+.admin-shell .topbar{padding-left:0}.admin-shell .badge{background:#efffd0;color:#4d7c0f}
+@media(max-width:640px){.admin-shell .main{padding:20px 16px 28px}.admin-menu-wrap{left:12px;top:10px}.admin-dropdown{width:min(245px,calc(100vw - 24px))}}
 
 /* Role logos: compact and beside the three-line menu */
 .role-brand-logo{position:absolute;left:68px;top:10px;z-index:90;display:flex;align-items:center;justify-content:center;width:82px;height:82px;padding:5px;background:rgba(255,255,255,.96);border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,.10)}
