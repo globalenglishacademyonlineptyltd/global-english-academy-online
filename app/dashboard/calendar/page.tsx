@@ -1,0 +1,1 @@
+"use client";import GlobalCalendar from "../_components/GlobalCalendar";export default function Calendar(){return <main className="main"><GlobalCalendar admin/></main>}
