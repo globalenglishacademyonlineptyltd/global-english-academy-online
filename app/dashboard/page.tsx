@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import RegionalSettings from "./_components/RegionalSettings";
 
 type U = {
   id: string;
@@ -207,7 +206,6 @@ export default function Dashboard() {
           <span className="badge">{u.role}</span>
         </div>
 
-        {u.role === "ADMIN" && <RegionalSettings />}
 
         <div className="grid">
           {u.role === "ADMIN" ? (
