@@ -14,7 +14,7 @@ ALTER TABLE lessons ADD COLUMN IF NOT EXISTS class_number bigint;
 ALTER TABLE lessons ADD COLUMN IF NOT EXISTS class_id text;
 UPDATE lessons SET class_number=nextval('lesson_class_number_seq') WHERE class_number IS NULL;
 SELECT setval('lesson_class_number_seq',GREATEST(COALESCE((SELECT MAX(class_number) FROM lessons),0),COALESCE((SELECT last_value FROM lesson_class_number_seq),0))+1,false);
-UPDATE lessons SET class_id='GEAO'||to_char(starts_at AT TIME ZONE 'Africa/Johannesburg','YYYYMMDD')||'/'||lpad(class_number::text,3,'0') WHERE class_id IS NULL;
+UPDATE lessons SET class_id='GEAO'||to_char(starts_at AT TIME ZONE 'Asia/Shanghai','YYYYMMDD')||'/'||lpad(class_number::text,3,'0') WHERE class_id IS NULL;
 ALTER TABLE lessons ALTER COLUMN class_number SET DEFAULT nextval('lesson_class_number_seq');
 CREATE UNIQUE INDEX IF NOT EXISTS idx_lessons_class_number ON lessons(class_number);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_lessons_class_id ON lessons(class_id);
