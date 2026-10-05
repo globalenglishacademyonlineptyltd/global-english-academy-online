@@ -104,8 +104,8 @@ export default function Dashboard() {
     u.role === "ADMIN"
       ? [
           ["Dashboard", "/dashboard"],
-          ["Teachers", "/dashboard/teachers"],
-          ["Students", "/dashboard/students"],
+          ["Add/Remove Teacher", "/dashboard/teachers"],
+          ["Add/Remove Students", "/dashboard/students"],
           ["Deleted Teacher Histories", "/dashboard/deleted-teachers"],
           ["Deleted Student Histories", "/dashboard/deleted-students"],
           ["Lessons", "/dashboard/lessons"],
@@ -207,7 +207,7 @@ export default function Dashboard() {
           <span className="badge">{u.role}</span>
         </div>
 
-        <RegionalSettings />
+        {u.role === "ADMIN" && <RegionalSettings />}
 
         <div className="grid">
           {u.role === "ADMIN" ? (
