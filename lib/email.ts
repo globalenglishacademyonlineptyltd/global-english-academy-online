@@ -1,5 +1,5 @@
 const appUrl=()=>process.env.NEXT_PUBLIC_APP_URL||"";
-const from=()=>process.env.RESEND_FROM||process.env.EMAIL_FROM||"Global English Academy <onboarding@resend.dev>";
+const from=()=>process.env.RESEND_FROM||"Global English Academy <noreply@globalenglishacademyonline.co.za>";
 
 export async function sendEmail(to:string,subject:string,text:string){
   if(!to)return false;
