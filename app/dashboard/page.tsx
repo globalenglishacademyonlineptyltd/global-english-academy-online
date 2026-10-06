@@ -247,10 +247,9 @@ export default function Dashboard() {
             <div className="session-list">
               {lessons.filter(l=>l.status!=="CANCELLED").map((l)=>{
                 const d=new Date(l.starts_at);
-                return <div className="session-row" key={l.id}>
+                return <div className={`session-row ${u.role === "STUDENT" ? "session-student" : "session-teacher"}`} key={l.id}>
                   <span>{d.toLocaleDateString("sv-SE")} {d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</span>
-                  <span className="session-count">{l.student_name||l.teacher_name||"1"}</span>
-                  {l.status==="SCHEDULED" && <Link href={"/classroom/"+l.room_code}>Join</Link>}
+
                 </div>;
               })}
               {lessons.filter(l=>l.status!=="CANCELLED").length===0 && <div className="session-empty">No scheduled sessions.</div>}
