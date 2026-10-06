@@ -34,12 +34,13 @@ export async function GET(req:Request){
     return NextResponse.json({rows:rows.rows,teachers:teachers.rows});
   }
   if(s.role==="TEACHER"){
-    const vals:any[]=[s.id]; let where="l.teacher_id=$1 AND l.status='COMPLETED' AND l.ends_at<=now()";
+    const vals:any[]=[s.id]; let where="l.teacher_id=$1 AND l.ends_at<=now()";
     if(start){vals.push(start+" 00:00:00");where+=" AND l.starts_at >= $"+vals.length}
     if(end){vals.push(end+" 23:59:59.999");where+=" AND l.starts_at <= $"+vals.length}
+    const totals=await query(`SELECT COUNT(*)::int total_lessons, COUNT(*) FILTER (WHERE l.status='COMPLETED')::int completed_lessons FROM lessons l WHERE l.teacher_id=$1 AND l.ends_at<=now()`,[s.id]);
     const stats=await query(`SELECT r.rating,COUNT(*)::int count FROM teacher_ratings r
       JOIN lessons l ON l.id=r.lesson_id WHERE ${where} AND r.rating IS NOT NULL GROUP BY r.rating ORDER BY r.rating`,vals);
-    const rows=await query(`SELECT l.id lesson_id,l.class_id,l.starts_at,l.ends_at,st.full_name student_name,
+    const rows=await query(`SELECT l.id lesson_id,l.class_id,l.starts_at,l.ends_at,l.status,l.lesson_type,st.full_name student_name,
       r.id rating_id,COALESCE(r.rating,0)::int rating,r.opinion
       FROM lessons l JOIN users st ON st.id=l.student_id
       LEFT JOIN teacher_ratings r ON r.lesson_id=l.id
@@ -50,7 +51,7 @@ export async function GET(req:Request){
       COALESCE(AVG(r.rating) FILTER(WHERE r.created_at>=date_trunc('month',now())-interval '1 month' AND r.created_at<date_trunc('month',now())),0) prev_month,
       COALESCE(AVG(r.rating) FILTER(WHERE r.created_at>=date_trunc('month',now())),0) month
       FROM teacher_ratings r WHERE r.teacher_id=$1`,[s.id]);
-    return NextResponse.json({stats:stats.rows,rows:rows.rows,trend:trend.rows[0]});
+    return NextResponse.json({stats:stats.rows,rows:rows.rows,trend:trend.rows[0],totals:totals.rows[0]});
   }
   const vals:any[]=[s.id]; let where="l.student_id=$1 AND l.status='COMPLETED' AND l.ends_at<=now()";
   if(start){vals.push(start+" 00:00:00");where+=" AND l.starts_at >= $"+vals.length}
