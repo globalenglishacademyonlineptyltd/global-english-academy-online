@@ -140,8 +140,8 @@ export default function Classroom(){
    <div className="gc-brand">{branding?.logo_data?<img src={branding.logo_data} alt={branding.school_name}/>:<span className="gc-brand-icon">🎓</span>}<div><strong>{branding?.school_name||"Global English Academy"}</strong><small>{lesson.class_id||"Live Classroom"} • {lesson.student_name}</small></div></div>
    <div className="gc-status"><span className={connected?"gc-dot live":"gc-dot"}></span>{connected?"Connected":status}</div>
    <div className="gc-actions">
-    {me?.role!=="ADMIN"&&<button className={muted?"active":""} onClick={()=>{const n=!muted;localStream.current?.getAudioTracks().forEach(t=>t.enabled=!n);setMuted(n);}}>🎙 {muted?"Unmute":"Mute"}</button>
-    <button className={!camera?"active":""} onClick={()=>{const n=!camera;localStream.current?.getVideoTracks().forEach(t=>t.enabled=n);setCamera(n);}}>📷 Camera</button>}
+    {me?.role!=="ADMIN"&&<button className={muted?"active":""} onClick={()=>{const n=!muted;localStream.current?.getAudioTracks().forEach(t=>t.enabled=!n);setMuted(n);}}>🎙 {muted?"Unmute":"Mute"}</button>}
+    {me?.role!=="ADMIN"&&<button className={!camera?"active":""} onClick={()=>{const n=!camera;localStream.current?.getVideoTracks().forEach(t=>t.enabled=n);setCamera(n);}}>📷 Camera</button>}
     {me?.role!=="ADMIN"&&<button className={recording?"active":""} onClick={recording?stopRecording:startRecording}>⏺ {recording?"Stop "+time:"Record"}</button>}
     <button disabled={!teacher} onClick={()=>setShowGames(true)}>🎮 Games</button><button disabled={!teacher} onClick={()=>setShowLayout(true)}>🎭 Role Play</button>{me?.role!=="ADMIN"&&<button className="danger" onClick={endClass}>{ending?"Ending…":"End Class"}</button>}
    </div>
