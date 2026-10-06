@@ -2,8 +2,7 @@ import{NextResponse}from"next/server";import{query}from"@/lib/db";import{require
 async function chooseNextMaterial(studentId:string,lessonType:string){if(lessonType==="DEMO")return null;const st=await query<any>("SELECT starting_material_id,coalesce(level,'Level 1') level,ferris_wheel_material_id FROM students WHERE user_id=$1",[studentId]);const row=st.rows[0];if(!row)return null;if(lessonType==="FERRIS_WHEEL"&&row.ferris_wheel_material_id){const m=await query<any>("SELECT * FROM materials WHERE id=$1",[row.ferris_wheel_material_id]);return m.rows[0]||null}const startId=row.starting_material_id,studentLevel=row.level||"Level 1";const mats=await query<any>("SELECT id,title,folder,sequence_no FROM materials WHERE folder NOT IN ('Demo','Ferris Wheel') ORDER BY NULLIF(regexp_replace(folder,'[^0-9]','','g'),'')::int NULLS LAST,sequence_no,title");if(!mats.rowCount)return null;const used=await query<any>("SELECT DISTINCT lm.material_id FROM lesson_materials lm JOIN lessons l ON l.id=lm.lesson_id WHERE l.student_id=$1 AND l.status<>'CANCELLED' AND l.lesson_type NOT IN ('DEMO','FERRIS_WHEEL')",[studentId]);const usedIds=new Set(used.rows.map((x:any)=>x.material_id));let startIndex=0;if(startId){const i=mats.rows.findIndex((m:any)=>m.id===startId);if(i>=0)startIndex=i}else{const i=mats.rows.findIndex((m:any)=>m.folder===studentLevel);if(i>=0)startIndex=i}return mats.rows.slice(startIndex).find((m:any)=>!usedIds.has(m.id))||null}
 async function ensureLessonEmailColumns(){await query("ALTER TABLE lessons ADD COLUMN IF NOT EXISTS reminder_24h_ids jsonb NOT NULL DEFAULT '[]'::jsonb");await query("ALTER TABLE lessons ADD COLUMN IF NOT EXISTS reminder_1h_ids jsonb NOT NULL DEFAULT '[]'::jsonb");await query("ALTER TABLE lessons ADD COLUMN IF NOT EXISTS student_cancelled_late boolean NOT NULL DEFAULT false")}
 export async function GET(req:Request){await ensureLessonEmailColumns();const s=await requireRole(["ADMIN","TEACHER","STUDENT"]);await query("UPDATE lessons SET class_number=nextval('lesson_class_number_seq') WHERE class_number IS NULL");await query("UPDATE lessons SET class_id='GEAO'||to_char(starts_at AT TIME ZONE 'Asia/Shanghai','YYYYMMDD')||'/'||lpad(class_number::text,3,'0') WHERE class_id IS NULL AND class_number IS NOT NULL");
-if(s.role==="ADMIN"){
-  await query(`WITH presence AS (
+await query(`WITH presence AS (
     SELECT l.id,
       min(cs.created_at) FILTER (WHERE cs.sender_id=l.teacher_id AND cs.payload->>'type'='presence') AS teacher_first,
       min(cs.created_at) FILTER (WHERE cs.sender_id=l.student_id AND cs.payload->>'type'='presence') AS student_first
@@ -21,7 +20,6 @@ if(s.role==="ADMIN"){
   END
   FROM presence p
   WHERE l.id=p.id AND l.status='SCHEDULED'`);
-}
 let q="SELECT l.*,t.full_name teacher_name,st.full_name student_name,coalesce(si.level,'Beginner') student_level,si.age student_age,si.ferris_wheel_material_id,mat.material_title FROM lessons l JOIN users t ON t.id=l.teacher_id JOIN users st ON st.id=l.student_id LEFT JOIN students si ON si.user_id=st.id LEFT JOIN LATERAL (SELECT m.title material_title FROM lesson_materials lm JOIN materials m ON m.id=lm.material_id WHERE lm.lesson_id=l.id LIMIT 1) mat ON true",v:any[]=[];
 const params=new URL(req.url).searchParams;if(s.role==="TEACHER"){q+=" WHERE l.teacher_id=$1";v=[s.id]}if(s.role==="STUDENT"){q+=" WHERE l.student_id=$1";v=[s.id]}if(s.role==="ADMIN"){
   q+=" WHERE t.deleted_at IS NULL AND st.deleted_at IS NULL";
