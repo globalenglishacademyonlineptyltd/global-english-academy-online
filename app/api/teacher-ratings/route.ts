@@ -34,10 +34,10 @@ export async function GET(req:Request){
     return NextResponse.json({rows:rows.rows,teachers:teachers.rows});
   }
   if(s.role==="TEACHER"){
-    const vals:any[]=[s.id]; let where="l.teacher_id=$1 AND l.ends_at<=now()";
+    const vals:any[]=[s.id]; let where="l.teacher_id=$1 AND l.starts_at<=now()";
     if(start){vals.push(start+" 00:00:00");where+=" AND l.starts_at >= $"+vals.length}
     if(end){vals.push(end+" 23:59:59.999");where+=" AND l.starts_at <= $"+vals.length}
-    const totals=await query(`SELECT COUNT(*)::int total_lessons, COUNT(*) FILTER (WHERE l.status='COMPLETED')::int completed_lessons FROM lessons l WHERE l.teacher_id=$1 AND l.ends_at<=now()`,[s.id]);
+    const totals=await query(`SELECT COUNT(*)::int total_lessons, COUNT(*) FILTER (WHERE l.status='COMPLETED')::int completed_lessons FROM lessons l WHERE l.teacher_id=$1 AND l.starts_at<=now()`,[s.id]);
     const stats=await query(`SELECT r.rating,COUNT(*)::int count FROM teacher_ratings r
       JOIN lessons l ON l.id=r.lesson_id WHERE ${where} AND r.rating IS NOT NULL GROUP BY r.rating ORDER BY r.rating`,vals);
     const rows=await query(`SELECT l.id lesson_id,l.class_id,l.starts_at,l.ends_at,l.status,l.lesson_type,st.full_name student_name,
