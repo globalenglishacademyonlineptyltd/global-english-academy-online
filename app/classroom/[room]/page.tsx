@@ -19,7 +19,7 @@ export default function Classroom(){
  const [materials,setMaterials]=useState<any[]>([]),[rewards,setRewards]=useState<any[]>([]);
  const [interactive,setInteractive]=useState(false),[game,setGame]=useState<any>(null),[score,setScore]=useState(0),[reward,setReward]=useState(""),[sortDrag,setSortDrag]=useState(""),[orderPick,setOrderPick]=useState<string[]>([]);
  const [connected,setConnected]=useState(false),[muted,setMuted]=useState(false),[camera,setCamera]=useState(true),[recording,setRecording]=useState(false),[recordTime,setRecordTime]=useState(0);
- const [chat,setChat]=useState<any[]>([]),[chatText,setChatText]=useState(""),[showGames,setShowGames]=useState(false),[showLayout,setShowLayout]=useState(false),[openMaterial,setOpenMaterial]=useState<any>(null),[positions,setPositions]=useState<any>({teacher:{x:2,y:2,w:24},student:{x:74,y:2,w:24}});
+ const [showGames,setShowGames]=useState(false),[showLayout,setShowLayout]=useState(false),[openMaterial,setOpenMaterial]=useState<any>(null),[positions,setPositions]=useState<any>({teacher:{x:2,y:2,w:24},student:{x:74,y:2,w:24}});
  const [loading,setLoading]=useState(true),[error,setError]=useState(""),[status,setStatus]=useState("Starting classroom…"),[ending,setEnding]=useState(false);
 
  const localVideo=useRef<HTMLVideoElement|null>(null),remoteVideo=useRef<HTMLVideoElement|null>(null),localStream=useRef<MediaStream|null>(null),remoteStream=useRef<MediaStream|null>(null),peer=useRef<RTCPeerConnection|null>(null),after=useRef("1970-01-01T00:00:00.000Z"),seen=useRef<Set<string>>(new Set()),poller=useRef<any>(null),recorder=useRef<MediaRecorder|null>(null),recordChunks=useRef<Blob[]>([]),recordStarted=useRef<number>(0),canvas=useRef<HTMLCanvasElement|null>(null);
@@ -165,7 +165,7 @@ export default function Classroom(){
     <div className="gc-panel"><h3>Student Interaction</h3><div className="gc-control-row"><button className={interactive?"active":""} disabled={!teacher} onClick={()=>{const n=!interactive;setInteractive(n);setReward("");broadcast({interactive:n});}}>{interactive?"🟢 Student Controls ON":"⚪ Student Controls OFF"}</button><button onClick={()=>setShowGames(true)}>🎮 Games</button></div></div>
     <div className="gc-panel"><h3>Lesson</h3><strong>{lesson.topic||"English Lesson"}</strong><p>{lesson.student_name} • {lesson.student_level||"English"}{lesson.student_age?" • Age "+lesson.student_age:""}</p></div>
     {teacher&&<div className="gc-panel"><h3>Student Rewards</h3><div className="gc-control-row">{Object.entries(ICONS).map(([type,icon]:any)=><button key={type} disabled={rewards.length>=15} onClick={()=>giveReward(type)} style={{fontSize:18}}>{icon}</button>)}</div><p>{rewards.length}/15 rewards</p></div>}
-    <div className="gc-chat"><div className="gc-chat-list">{chat.length===0?<div className="empty-chat">Class chat is ready.</div>:chat.map((m,i)=><div className="gc-msg" key={i}><strong>{m.name}</strong>{m.text}</div>)}</div><div className="gc-chat-input"><input value={chatText} onChange={e=>setChatText(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")sendChat();}} placeholder="Message…"/><button onClick={sendChat}>Send</button></div></div>
+    <div className="gc-chat-disabled"><strong>School-controlled classroom</strong><span>Teacher and student contact details and direct messaging are disabled. Communication is limited to the live lesson.</span></div>
    </aside>
   </div>
 
