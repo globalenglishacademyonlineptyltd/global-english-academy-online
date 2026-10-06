@@ -5,8 +5,8 @@ export async function GET(req:Request){await ensureLessonEmailColumns();const s=
 if(s.role==="ADMIN"){
   await query(`WITH presence AS (
     SELECT l.id,
-      min(cs.created_at) FILTER (WHERE cs.sender_id=l.teacher_id) AS teacher_first,
-      min(cs.created_at) FILTER (WHERE cs.sender_id=l.student_id) AS student_first
+      min(cs.created_at) FILTER (WHERE cs.sender_id=l.teacher_id AND cs.payload->>'type'='presence') AS teacher_first,
+      min(cs.created_at) FILTER (WHERE cs.sender_id=l.student_id AND cs.payload->>'type'='presence') AS student_first
     FROM lessons l
     LEFT JOIN classroom_signals cs ON cs.room_code=l.room_code
     WHERE l.status='SCHEDULED' AND l.ends_at<=now()
