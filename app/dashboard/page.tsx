@@ -308,9 +308,7 @@ export default function Dashboard() {
                 return <button type="button" className={`session-row ${u.role === "STUDENT" ? "session-student" : "session-teacher"}`} key={l.id} onClick={() => setSelectedLesson(l)}>
                   <span>{d.toLocaleDateString("sv-SE")} {d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</span>
                   <span style={{marginLeft:"auto",fontWeight:700}}>
-                    {l.status==="MISSED_BY_TEACHER_AND_STUDENT" ? "MISSED BY TEACHER AND STUDENT" :
-                     l.status==="MISSED_BY_TEACHER" ? "MISSED BY TEACHER" :
-                     l.status==="NO_SHOW" ? "MISSED BY STUDENT" : ""}
+                    {["MISSED_BY_TEACHER_AND_STUDENT","MISSED_BY_TEACHER","NO_SHOW"].includes(l.status) ? "MISSED" : ""}
                   </span>
                 </button>;
               })}
