@@ -24,6 +24,7 @@ export default function Dashboard() {
   const [branding, setBranding] = useState<any>(null);
   const [serverTime, setServerTime] = useState(new Date());
   const [selectedLesson, setSelectedLesson] = useState<any>(null);
+  async function rateTeacher(lessonId:string,rating:number){await fetch("/api/teacher-ratings",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId,rating})});}
 
   async function loadNotifications() {
     if (u?.role !== "STUDENT") return;
@@ -247,13 +248,13 @@ export default function Dashboard() {
               <span><i className="session-dot demo"></i>Demo class</span>
             </div>
             <div className="session-list">
-              {lessons.filter(l=>l.status!=="CANCELLED").map((l)=>{
+              {lessons.filter(l=>{const nowKey=serverTime.toLocaleDateString("en-CA",{timeZone:"Africa/Johannesburg"});return l.status!=="CANCELLED"&&new Date(l.starts_at).toLocaleDateString("en-CA",{timeZone:"Africa/Johannesburg"})===nowKey;}).map((l)=>{
                 const d=new Date(l.starts_at);
                 return <button type="button" className={`session-row ${u.role === "STUDENT" ? "session-student" : "session-teacher"}`} key={l.id} onClick={() => setSelectedLesson(l)}>
                   <span>{d.toLocaleDateString("sv-SE")} {d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</span>
                 </button>;
               })}
-              {lessons.filter(l=>l.status!=="CANCELLED").length===0 && <div className="session-empty">No scheduled sessions.</div>}
+              {lessons.filter(l=>{const nowKey=serverTime.toLocaleDateString("en-CA",{timeZone:"Africa/Johannesburg"});return l.status!=="CANCELLED"&&new Date(l.starts_at).toLocaleDateString("en-CA",{timeZone:"Africa/Johannesburg"})===nowKey;}).length===0 && <div className="session-empty">No scheduled sessions today.</div>}
             </div>
             {selectedLesson && (
               <div className="session-detail-overlay" onClick={() => setSelectedLesson(null)}>
@@ -276,7 +277,7 @@ export default function Dashboard() {
                         {u.role === "TEACHER" && <div><span>Age</span><strong>{selectedLesson.student_age ?? "—"}</strong></div>}
                       </div>
                       <div className="session-enter-area">
-                        {canEnter ? <a className="session-enter-button" href={"/classroom/"+selectedLesson.room_code}>Enter classroom</a> : <div className="session-enter-wait">Enter classroom will appear exactly 10 minutes before the class starts.</div>}
+                        {canEnter ? <a className="session-enter-button" href={"/classroom/"+selectedLesson.room_code}>Enter classroom</a> : <div className="session-enter-wait">Enter classroom will appear exactly 10 minutes before the class starts.</div>}{u.role==="TEACHER"&&serverTime.getTime()>=end.getTime()&&<a className="primary" style={{display:"inline-block",marginTop:10,textDecoration:"none"}} href={"/dashboard/records?lessonId="+encodeURIComponent(selectedLesson.id)}>Complete Report</a>}{u.role==="STUDENT"&&serverTime.getTime()>=end.getTime()&&<div className="session-rating"><div>Rate your teacher</div><div>{Array.from({length:10},(_,i)=><button key={i} type="button" onClick={()=>rateTeacher(selectedLesson.id,i+1)}>★</button>)}</div></div>}
                       </div>
                     </>;
                   })()}
