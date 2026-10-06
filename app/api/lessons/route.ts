@@ -8,7 +8,7 @@ await query(`WITH presence AS (
       min(cs.created_at) FILTER (WHERE cs.sender_id=l.student_id AND cs.payload->>'type'='presence') AS student_first
     FROM lessons l
     LEFT JOIN classroom_signals cs ON cs.room_code=l.room_code
-    WHERE l.status='SCHEDULED' AND l.ends_at<=now()
+    WHERE l.status NOT IN ('CANCELLED','COMPLETED','MISSED_BY_TEACHER','MISSED_BY_TEACHER_AND_STUDENT','NO_SHOW') AND l.ends_at<=now()
     GROUP BY l.id
   )
   UPDATE lessons l
@@ -19,7 +19,7 @@ await query(`WITH presence AS (
     ELSE 'COMPLETED'
   END
   FROM presence p
-  WHERE l.id=p.id AND l.status='SCHEDULED'`);
+  WHERE l.id=p.id AND l.status NOT IN ('CANCELLED','COMPLETED','MISSED_BY_TEACHER','MISSED_BY_TEACHER_AND_STUDENT','NO_SHOW')`);
 let q="SELECT l.*,t.full_name teacher_name,st.full_name student_name,coalesce(si.level,'Beginner') student_level,si.age student_age,si.ferris_wheel_material_id,mat.material_title FROM lessons l JOIN users t ON t.id=l.teacher_id JOIN users st ON st.id=l.student_id LEFT JOIN students si ON si.user_id=st.id LEFT JOIN LATERAL (SELECT m.title material_title FROM lesson_materials lm JOIN materials m ON m.id=lm.material_id WHERE lm.lesson_id=l.id LIMIT 1) mat ON true",v:any[]=[];
 const params=new URL(req.url).searchParams;if(s.role==="TEACHER"){q+=" WHERE l.teacher_id=$1";v=[s.id]}if(s.role==="STUDENT"){q+=" WHERE l.student_id=$1";v=[s.id]}if(s.role==="ADMIN"){
   q+=" WHERE t.deleted_at IS NULL AND st.deleted_at IS NULL";
