@@ -113,6 +113,8 @@ export default function Dashboard() {
           ["Dashboard", "/dashboard"],
           ["Add/Remove Teacher", "/dashboard/teachers"],
           ["Add/Remove Students", "/dashboard/students"],
+          ["View Teachers", "/dashboard/view-teachers"],
+          ["View Students", "/dashboard/view-students"],
           ["Deleted Teacher Histories", "/dashboard/deleted-teachers"],
           ["Deleted Student Histories", "/dashboard/deleted-students"],
           ["Lessons", "/dashboard/lessons"],
