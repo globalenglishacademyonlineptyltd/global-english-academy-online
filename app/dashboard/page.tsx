@@ -304,12 +304,12 @@ export default function Dashboard() {
               <span><i className="session-dot ferris" style={{background:"#facc15",border:"1px solid #ca8a04"}}></i>Ferris wheel class</span>
               <span><i className="session-dot demo" style={{background:"#ff4fd8",border:"1px solid #db2777"}}></i>Demo class</span>
               <span><i className="session-dot pending-cancel" style={{background:"#fb923c",border:"1px solid #ea580c"}}></i>Pending cancellation slots</span>
-              <span><i className="session-dot canceled" style={{background:"#e5e7eb",border:"1px solid #6b7280"}}></i>Canceled slots</span>
+              <span><i className="session-dot canceled" style={{background:"#ef4444",border:"1px solid #b91c1c"}}></i>Canceled slots</span>
             </div>}
             <div className="session-list">
               {lessons.filter(l=>{const nowKey=serverTime.toLocaleDateString("en-CA",{timeZone:"Africa/Johannesburg"});return l.status!=="CANCELLED"&&new Date(l.starts_at).toLocaleDateString("en-CA",{timeZone:"Africa/Johannesburg"})===nowKey;}).map((l)=>{
                 const d=new Date(l.starts_at);
-                return <button type="button" className={`session-row ${u.role === "STUDENT" ? "session-student" : "session-teacher"}`} key={l.id} onClick={() => setSelectedLesson(l)}>
+                const sessionStyle = l.status==="NO_SHOW" || l.status==="MISSED_BY_TEACHER_AND_STUDENT" && u.role==="STUDENT" ? {background:"#ff1f1f",color:"#111827",borderColor:"#dc2626"} : l.status==="MISSED_BY_TEACHER" || l.status==="MISSED_BY_TEACHER_AND_STUDENT" && u.role==="TEACHER" ? {background:"#d1d5db",color:"#111827",borderColor:"#6b7280"} : undefined; return <button type="button" className={`session-row ${u.role === "STUDENT" ? "session-student" : "session-teacher"}`} style={sessionStyle} key={l.id} onClick={() => setSelectedLesson(l)}>
                   <span>{d.toLocaleDateString("sv-SE")} {d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</span>
                   <span style={{marginLeft:"auto",fontWeight:700}}>
                     {["MISSED_BY_TEACHER_AND_STUDENT","MISSED_BY_TEACHER","NO_SHOW"].includes(l.status) ? (u.role==="TEACHER" ? "MISSED - UNPAID" : "MISSED") : ""}
