@@ -21,7 +21,9 @@ if(s.role==="ADMIN"){
   END
   FROM presence p
   WHERE l.id=p.id AND l.status='SCHEDULED'`);
-}let q="SELECT l.*,t.full_name teacher_name,st.full_name student_name,coalesce(si.level,'Beginner') student_level,si.age student_age,si.ferris_wheel_material_id,mat.material_title FROM lessons l JOIN users t ON t.id=l.teacher_id JOIN users st ON st.id=l.student_id LEFT JOIN students si ON si.user_id=st.id LEFT JOIN LATERAL (SELECT m.title material_title FROM lesson_materials lm JOIN materials m ON m.id=lm.material_id WHERE lm.lesson_id=l.id LIMIT 1) mat ON true",v:any[]=[]const params=new URL(req.url).searchParams;if(s.role==="TEACHER"){q+=" WHERE l.teacher_id=$1";v=[s.id]}if(s.role==="STUDENT"){q+=" WHERE l.student_id=$1";v=[s.id]}if(s.role==="ADMIN"){
+}
+let q="SELECT l.*,t.full_name teacher_name,st.full_name student_name,coalesce(si.level,'Beginner') student_level,si.age student_age,si.ferris_wheel_material_id,mat.material_title FROM lessons l JOIN users t ON t.id=l.teacher_id JOIN users st ON st.id=l.student_id LEFT JOIN students si ON si.user_id=st.id LEFT JOIN LATERAL (SELECT m.title material_title FROM lesson_materials lm JOIN materials m ON m.id=lm.material_id WHERE lm.lesson_id=l.id LIMIT 1) mat ON true",v:any[]=[];
+const params=new URL(req.url).searchParams;if(s.role==="TEACHER"){q+=" WHERE l.teacher_id=$1";v=[s.id]}if(s.role==="STUDENT"){q+=" WHERE l.student_id=$1";v=[s.id]}if(s.role==="ADMIN"){
   q+=" WHERE t.deleted_at IS NULL AND st.deleted_at IS NULL";
   const tz=process.env.SCHOOL_TIMEZONE||"Africa/Johannesburg";
   const startDate=params.get("startDate"),endDate=params.get("endDate"),teacherId=params.get("teacherId"),studentId=params.get("studentId");
