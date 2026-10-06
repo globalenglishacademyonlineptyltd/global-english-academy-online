@@ -31,7 +31,14 @@ export async function GET(req:Request){
       LEFT JOIN recordings rec ON rec.lesson_id=l.id
       WHERE ${where} AND r.rating IS NOT NULL ORDER BY l.starts_at DESC LIMIT 500`,vals);
     const teachers=await query("SELECT id,full_name FROM users WHERE role='TEACHER' ORDER BY full_name",[]);
-    return NextResponse.json({rows:rows.rows,teachers:teachers.rows});
+    let stats:any[]=[]; let totals:any={total_lessons:0,completed_lessons:0};
+    if(teacher){
+      const sr=await query("SELECT rating,COUNT(*)::int count FROM teacher_ratings WHERE teacher_id=$1 AND rating IS NOT NULL GROUP BY rating ORDER BY rating",[teacher]);
+      stats=sr.rows;
+      const tr=await query("SELECT COUNT(*)::int total_lessons, COUNT(*) FILTER (WHERE status='COMPLETED')::int completed_lessons FROM lessons WHERE teacher_id=$1 AND COALESCE(ends_at,starts_at)<=now()",[teacher]);
+      totals=tr.rows[0]||totals;
+    }
+    return NextResponse.json({rows:rows.rows,teachers:teachers.rows,stats,totals});
   }
   if(s.role==="TEACHER"){
     const vals:any[]=[s.id]; let where="l.teacher_id=$1 AND COALESCE(l.ends_at,l.starts_at)<=now()";
