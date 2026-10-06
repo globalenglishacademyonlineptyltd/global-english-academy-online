@@ -297,10 +297,14 @@ export default function Dashboard() {
             <div className="session-note">
               Note: The number beside the classroom means the system to be used. Your scheduled lessons appear below.
             </div>
-            <div className="session-legend">
-              <span><i className="session-dot regular"></i>Regular Junior class</span>
-              <span><i className="session-dot ferris"></i>Ferris wheel class</span>
-              <span><i className="session-dot demo"></i>Demo class</span>
+            <div className="session-legend" style={{display:"flex",flexWrap:"wrap",gap:"8px 16px"}}>
+              <span><i className="session-dot pending-approval" style={{background:"#fef3c7",border:"1px solid #f59e0b"}}></i>Pending Approval for available slots</span>
+              <span><i className="session-dot approved-available" style={{background:"#93c5fd",border:"1px solid #2563eb"}}></i>Approved available slots</span>
+              <span><i className="session-dot regular" style={{background:"#ede9fe",border:"1px solid #8b5cf6"}}></i>Regular Junior class 1v1</span>
+              <span><i className="session-dot ferris" style={{background:"#facc15",border:"1px solid #ca8a04"}}></i>Ferris wheel class</span>
+              <span><i className="session-dot demo" style={{background:"#ff4fd8",border:"1px solid #db2777"}}></i>Demo class</span>
+              <span><i className="session-dot pending-cancel" style={{background:"#fb923c",border:"1px solid #ea580c"}}></i>Pending cancellation slots</span>
+              <span><i className="session-dot canceled" style={{background:"#e5e7eb",border:"1px solid #6b7280"}}></i>Canceled slots</span>
             </div>
             <div className="session-list">
               {lessons.filter(l=>{const nowKey=serverTime.toLocaleDateString("en-CA",{timeZone:"Africa/Johannesburg"});return l.status!=="CANCELLED"&&new Date(l.starts_at).toLocaleDateString("en-CA",{timeZone:"Africa/Johannesburg"})===nowKey;}).map((l)=>{
