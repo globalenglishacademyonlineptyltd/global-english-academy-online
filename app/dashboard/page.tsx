@@ -22,6 +22,7 @@ export default function Dashboard() {
   const [submitting, setSubmitting] = useState<string | null>(null);
   const [adminMenuOpen, setAdminMenuOpen] = useState(false);
   const [branding, setBranding] = useState<any>(null);
+  const [serverTime, setServerTime] = useState(new Date());
 
   async function loadNotifications() {
     if (u?.role !== "STUDENT") return;
@@ -64,6 +65,11 @@ export default function Dashboard() {
     fetch("/api/teachers", { cache: "no-store" })
       .then((x) => (x.ok ? x.json() : []))
       .then(setTeachers);
+  }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => setServerTime(new Date()), 1000);
+    return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
@@ -193,102 +199,64 @@ export default function Dashboard() {
       )}
 
       <main className="main">
-        <div className="topbar">
-          <div>
-            <h1>Welcome, {u.name}</h1>
-            <div className="muted">
-              {u.role === "ADMIN"
-                ? "School administration"
-                : u.role === "TEACHER"
-                  ? "Teacher portal"
-                  : "Student portal"}
+        {u.role === "ADMIN" ? (
+          <>
+            <div className="topbar">
+              <div>
+                <h1>Welcome, {u.name}</h1>
+                <div className="muted">School administration</div>
+              </div>
+              <span className="badge">ADMIN</span>
+            </div>
+            <div className="grid">
+              <div className="card"><div className="muted">Teachers</div><div className="metric">{teachers.length}</div></div>
+              <div className="card"><div className="muted">Students</div><div className="metric">{students.length}</div></div>
+              <div className="card"><div className="muted">Lessons</div><div className="metric">{lessons.length}</div></div>
+            </div>
+            <div className="section">
+              <h2>Lessons</h2>
+              <table className="table">
+                <thead><tr><th>Date</th><th>Time</th><th>Teacher</th><th>Student</th><th>Status</th></tr></thead>
+                <tbody>{lessons.map((l)=><tr key={l.id}><td>{new Date(l.starts_at).toLocaleDateString()}</td><td>{new Date(l.starts_at).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</td><td>{l.teacher_name}</td><td>{l.student_name}</td><td><span className="badge">{l.status==="CANCELLED"?"CANCELLED":l.status}</span></td></tr>)}</tbody>
+              </table>
+            </div>
+          </>
+        ) : (
+          <div className="session-page">
+            <div className="session-links">
+              <Link href="/dashboard/profile">▣ Personal Information</Link>
+              <Link href="/change-password">⌕ Change Password</Link>
+            </div>
+            <div className="session-heading">
+              <div className="session-title">
+                {branding?.logo_data ? <img src={branding.logo_data} alt="" /> : <span className="session-icon">◆</span>}
+                <strong>My Session</strong>
+              </div>
+            </div>
+            <div className="session-server-time">
+              Server Time: {serverTime.toLocaleString("sv-SE", {hour12:false}).replace("T"," ")}
+            </div>
+            <div className="session-note">
+              Note: The number beside the classroom means the system to be used. Your scheduled lessons appear below.
+            </div>
+            <div className="session-legend">
+              <span><i className="session-dot regular"></i>Regular Junior class</span>
+              <span><i className="session-dot ferris"></i>Ferris wheel class</span>
+              <span><i className="session-dot demo"></i>Demo class</span>
+            </div>
+            <div className="session-list">
+              {lessons.filter(l=>l.status!=="CANCELLED").map((l)=>{
+                const d=new Date(l.starts_at);
+                return <div className="session-row" key={l.id}>
+                  <span>{d.toLocaleDateString("sv-SE")} {d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</span>
+                  <span className="session-count">{l.student_name||l.teacher_name||"1"}</span>
+                  {l.status==="SCHEDULED" && <Link href={"/classroom/"+l.room_code}>Join</Link>}
+                </div>;
+              })}
+              {lessons.filter(l=>l.status!=="CANCELLED").length===0 && <div className="session-empty">No scheduled sessions.</div>}
             </div>
           </div>
-          <span className="badge">{u.role}</span>
-        </div>
-
-
-        <div className="grid">
-          {u.role === "ADMIN" ? (
-            <>
-              <div className="card">
-                <div className="muted">Teachers</div>
-                <div className="metric">{teachers.length}</div>
-              </div>
-              <div className="card">
-                <div className="muted">Students</div>
-                <div className="metric">{students.length}</div>
-              </div>
-              <div className="card">
-                <div className="muted">Lessons</div>
-                <div className="metric">{lessons.length}</div>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="card">
-                <div className="muted">My lessons</div>
-                <div className="metric">{lessons.length}</div>
-              </div>
-              <div className="card">
-                <div className="muted">Materials</div>
-                <div className="metric">{materials.length}</div>
-              </div>
-            </>
-          )}
-        </div>
-
-        <div className="section">
-          <h2>{u.role === "TEACHER" ? "My Sessions" : "Lessons"}</h2>
-          <table className="table">
-            <thead>
-              <tr>
-                {u.role === "TEACHER" && <th>Class ID</th>}
-                <th>Date</th>
-                <th>Time</th>
-                <th>Teacher</th>
-                <th>Student</th>
-                <th>Status</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {lessons.map((l) => {
-                const req = cancellations.find((c) => c.lesson_id === l.id);
-                const pending = req?.status === "PENDING";
-
-                return (
-                  <tr key={l.id}>
-                    {u.role === "TEACHER" && <td>{l.class_id || "—"}</td>}
-                    <td>{new Date(l.starts_at).toLocaleDateString()}</td>
-                    <td>
-                      {new Date(l.starts_at).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </td>
-                    <td>{l.teacher_name}</td>
-                    <td>{l.student_name}</td>
-                    <td>
-                      <span className="badge">{l.status === "CANCELLED" ? "CANCELLED" : l.status}</span>
-                    </td>
-                    <td>
-                      {l.status === "CANCELLED" && u.role === "STUDENT" ? (
-                        <Link className="primary" href="/dashboard/book">Rebook lesson</Link>
-                      ) : l.status === "SCHEDULED" ? (
-                        <>
-                          <Link href={"/classroom/" + l.room_code}>Join</Link>
-
-                          {(u.role === "TEACHER" || u.role === "STUDENT") && (pending ? (<button disabled style={{marginLeft:"10px",background:"#dc2626",color:"white",border:"1px solid #b91c1c",cursor:"not-allowed"}}>Cancellation Pending</button>) : (<button disabled={submitting===l.id} style={{marginLeft:"10px",background:submitting===l.id?"#dc2626":undefined,color:submitting===l.id?"white":undefined}} onClick={async()=>{setSubmitting(l.id);const reason=window.prompt("Why do you need to cancel this lesson?");if(reason===null){setSubmitting(null);return;}try{const x=await fetch("/api/cancellation-requests",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:l.id,reason})});const j=await x.json();if(!x.ok)window.alert(j.error);else{setCancellations(prev=>[...prev.filter(c=>c.lesson_id!==l.id),j]);window.alert("Cancellation request sent to Admin for approval.");}}catch{window.alert("Could not submit the cancellation request. Please try again.");}finally{setSubmitting(null);}}}>{submitting===l.id?"Submitting…":"Request cancellation"}</button>))}
-                        </>
-                      ) : null}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        )}
       </main>
     </div>
   );
