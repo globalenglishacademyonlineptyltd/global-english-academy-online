@@ -36,13 +36,42 @@ export async function sendEmail(to:string,subject:string,text:string){
   }
 }
 
-export async function sendBookingEmails(d:{teacherEmail:string;teacherName:string;studentEmail:string;studentName:string;startsAt:string;roomCode:string}){
-  const date=new Date(d.startsAt).toLocaleString("en-ZA",{dateStyle:"full",timeStyle:"short",timeZone:process.env.SCHOOL_TIMEZONE||"Africa/Johannesburg"});
+
+async function resendRequest(body:any){
+  const key=process.env.RESEND_API_KEY;if(!key)return null;
+  try{const res=await fetch("https://api.resend.com/emails",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+key},body:JSON.stringify(body),cache:"no-store"});const j=await res.json().catch(()=>({}));if(!res.ok){console.error("Resend email request failed:",res.status,j);return null}return j.id||null}catch(e){console.error("Resend request failed:",e);return null}
+}
+export async function scheduleEmail(to:string,subject:string,text:string,scheduledAt:string){
+  if(!to||new Date(scheduledAt).getTime()<=Date.now())return null;
+  return resendRequest({from:from(),to:[to],subject,text,scheduled_at:scheduledAt,tags:[{name:"category",value:"class_reminder"}]});
+}
+export async function cancelScheduledEmail(id:string|null){
+  if(!id||!process.env.RESEND_API_KEY)return;
+  try{await fetch("https://api.resend.com/emails/"+encodeURIComponent(id)+"/cancel",{method:"POST",headers:{Authorization:"Bearer "+process.env.RESEND_API_KEY},cache:"no-store"});}catch{}
+}
+
+export async function sendBookingEmails(d:{teacherEmail:string;teacherName:string;studentEmail:string;studentName:string;startsAt:string;roomCode:string;classId?:string;lessonTitle?:string;lessonType?:string}){
+  const tz=process.env.SCHOOL_TIMEZONE||"Africa/Johannesburg";
+  const date=new Date(d.startsAt).toLocaleString("en-ZA",{dateStyle:"full",timeStyle:"short",timeZone:tz});
+  const shortDate=new Date(d.startsAt).toLocaleDateString("en-CA",{timeZone:tz});
+  const time=new Date(d.startsAt).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",hour12:false,timeZone:tz});
+  const classLabel=d.lessonType==="DEMO"?"Demo":d.lessonType==="FERRIS_WHEEL"?"Ferris Wheel":"Reg";
+  const lesson=d.lessonTitle||"English Lesson";
+  const subject="[Booking] ["+classLabel+"] "+shortDate+" "+time+"(GMT+02) - "+d.studentName+" - "+lesson;
+  const body="[Class] : "+classLabel+"\n[Date, Time] : "+shortDate+" "+time+":00(GMT+02)\n[Student] : "+d.studentName+"\n[Lesson] : "+lesson;
   const join=appUrl()?appUrl()+"/classroom/"+d.roomCode:"";
   await Promise.all([
-    sendEmail(d.studentEmail,"Lesson booked — Global English Academy","Hello "+d.studentName+",\n\nYour English lesson has been booked with "+d.teacherName+".\nDate and time: "+date+"\nDuration: 30 minutes\n"+(join?"Join your lesson: "+join:"Please sign in to your school account to join.")+"\n\nGlobal English Academy"),
-    sendEmail(d.teacherEmail,"New lesson booked — Global English Academy","Hello "+d.teacherName+",\n\nA new 30-minute English lesson has been booked with "+d.studentName+".\nDate and time: "+date+"\n"+(join?"Classroom: "+join:"Please sign in to your school account to view the lesson.")+"\n\nGlobal English Academy")
+    sendEmail(d.studentEmail,subject,body+"\n\nGlobal English Academy"),
+    sendEmail(d.teacherEmail,subject,body+"\n\nGlobal English Academy")
   ]);
+  const reminderText="NOTICE: You have a class on "+shortDate+" "+time+":00(in your timezone GMT+02)! Please start the class on time. Thanks!\n\n[Class] : "+classLabel+"\n[Student] : "+d.studentName+"\n[Lesson] : "+lesson+(join?"\n\nPlease sign in to enter the classroom.":"");
+  const oneDay=new Date(new Date(d.startsAt).getTime()-24*60*60*1000).toISOString();
+  const oneHour=new Date(new Date(d.startsAt).getTime()-60*60*1000).toISOString();
+  const ids=await Promise.all([d.teacherEmail,d.studentEmail].flatMap(email=>[
+    scheduleEmail(email,"NOTICE: Class on "+shortDate+" (1 day reminder)",reminderText,oneDay),
+    scheduleEmail(email,"NOTICE: Class on "+shortDate+" "+time+" (1 hour reminder)",reminderText,oneHour)
+  ]));
+  return {reminder24hIds:ids.filter(Boolean).filter((_,i)=>i%2===0),reminder1hIds:ids.filter(Boolean).filter((_,i)=>i%2===1)};
 }
 
 export async function sendCancellationEmails(d:{teacherEmail:string;teacherName:string;studentEmail:string;studentName:string;startsAt:string}){
