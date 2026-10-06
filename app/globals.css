@@ -207,3 +207,15 @@ body{background:#f5f8fc}
 .session-enter-button{display:inline-block;background:#84cc16;color:#fff;text-decoration:none;font-weight:700;border-radius:6px;padding:10px 28px}
 .session-enter-wait{font-size:12px;color:#94a3b8;padding:10px}
 @media(max-width:640px){.session-detail-grid{grid-template-columns:1fr}}
+
+.report-modal{max-width:1000px;width:100%;max-height:90vh;overflow:auto}
+.report-modal-header{display:flex;justify-content:space-between;align-items:center}
+.report-mode-buttons{display:flex;gap:8px;margin-top:16px}
+.report-submit-row{display:flex;justify-content:flex-end;margin-top:18px}
+.report-pencil{border:1px solid #cbd5e1;background:#fff;border-radius:4px;width:28px;height:28px;cursor:pointer;color:#475569}
+.lesson-history-stars{display:flex;gap:1px;align-items:center}
+.lesson-history-stars button{border:0;background:transparent;padding:0 1px;cursor:pointer;font-size:20px;line-height:1;color:#cbd5e1}
+.lesson-history-stars button.rated{color:#facc15}
+.session-rating{margin-top:16px;text-align:center;font-size:12px;color:#475569}
+.session-rating button{border:0;background:transparent;padding:1px;cursor:pointer;font-size:26px;color:#cbd5e1}
+.session-rating button:hover{color:#facc15}
