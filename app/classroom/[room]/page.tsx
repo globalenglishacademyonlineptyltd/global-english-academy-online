@@ -49,7 +49,7 @@ export default function Classroom(){
    if(x.type==="chat"){setChat(v=>v.concat([{name:x.name||"Classroom",text:x.text||""}]).slice(-80));return;}
    const p=createPeer();
    try{
-     if(x.type==="offer"&&student){await p.setRemoteDescription(x.description);const a=await p.createAnswer();await p.setLocalDescription(a);await signal({type:"answer",description:p.localDescription});}
+     if(x.type==="offer"&&(student||me?.role==="ADMIN")){await p.setRemoteDescription(x.description);const a=await p.createAnswer();await p.setLocalDescription(a);await signal({type:"answer",description:p.localDescription});}
      else if(x.type==="answer"&&teacher)await p.setRemoteDescription(x.description);
      else if(x.type==="ice"&&x.candidate)await p.addIceCandidate(x.candidate);
    }catch{}
@@ -82,7 +82,7 @@ export default function Classroom(){
        const b=await fetch("/api/branding",{cache:"no-store"}).then(x=>x.ok?x.json():null).catch(()=>null);setBranding(b);
        const mm=await fetch("/api/lesson-materials?lessonId="+encodeURIComponent(found.id),{cache:"no-store"});if(mm.ok)setMaterials(await mm.json());
        const rr=await fetch("/api/rewards?lessonId="+encodeURIComponent(found.id),{cache:"no-store"});if(rr.ok)setRewards(await rr.json());
-       if(meRes.user.role==="ADMIN"){setLesson(found);setStatus("Admin monitoring mode — camera and microphone are off");setLoading(false);return;}const stream=await navigator.mediaDevices.getUserMedia({video:true,audio:true});if(!alive)return;
+       if(meRes.user.role==="ADMIN"){setLesson(found);setStatus("Admin monitoring mode — camera and microphone are off");setLoading(false);signal({type:"hello"});return;}const stream=await navigator.mediaDevices.getUserMedia({video:true,audio:true});if(!alive)return;
        localStream.current=stream;if(localVideo.current)localVideo.current.srcObject=stream;
        createPeer();setStatus("Connected — classroom ready");signal({type:"hello"});setLoading(false);
        setTimeout(()=>startRecording(),400);
