@@ -303,6 +303,11 @@ export default function Dashboard() {
                 const d=new Date(l.starts_at);
                 return <button type="button" className={`session-row ${u.role === "STUDENT" ? "session-student" : "session-teacher"}`} key={l.id} onClick={() => setSelectedLesson(l)}>
                   <span>{d.toLocaleDateString("sv-SE")} {d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</span>
+                  <span style={{marginLeft:"auto",fontWeight:700}}>
+                    {l.status==="MISSED_BY_TEACHER_AND_STUDENT" ? "MISSED BY TEACHER AND STUDENT" :
+                     l.status==="MISSED_BY_TEACHER" ? "MISSED BY TEACHER" :
+                     l.status==="NO_SHOW" ? "MISSED BY STUDENT" : ""}
+                  </span>
                 </button>;
               })}
               {lessons.filter(l=>{const nowKey=serverTime.toLocaleDateString("en-CA",{timeZone:"Africa/Johannesburg"});return l.status!=="CANCELLED"&&new Date(l.starts_at).toLocaleDateString("en-CA",{timeZone:"Africa/Johannesburg"})===nowKey;}).length===0 && <div className="session-empty">No scheduled sessions today.</div>}
@@ -328,7 +333,13 @@ export default function Dashboard() {
                         {u.role === "TEACHER" && <div><span>Age</span><strong>{selectedLesson.student_age ?? "—"}</strong></div>}
                       </div>
                       <div className="session-enter-area">
-                        {canEnter ? <a className="session-enter-button" href={"/classroom/"+selectedLesson.room_code}>Enter classroom</a> : <div className="session-enter-wait">Enter classroom will appear exactly 10 minutes before the class starts.</div>}{u.role==="TEACHER"&&serverTime.getTime()>=end.getTime()&&<a className="primary" style={{display:"inline-block",marginTop:10,textDecoration:"none"}} href={"/dashboard/records?lessonId="+encodeURIComponent(selectedLesson.id)}>Complete Report</a>}{u.role==="STUDENT"&&serverTime.getTime()>=end.getTime()&&selectedLesson.status!=="NO_SHOW"&&!selectedLesson.student_cancelled_late&&<div className="session-rating"><div>Rate your teacher</div><div>{Array.from({length:10},(_,i)=><button key={i} type="button" onClick={()=>rateTeacher(selectedLesson.id,i+1)}>★</button>)}</div></div>}
+                        {canEnter ? <a className="session-enter-button" href={"/classroom/"+selectedLesson.room_code}>Enter classroom</a> : <div className="session-enter-wait">Enter classroom will appear exactly 10 minutes before the class starts.</div>}{u.role==="TEACHER"&&serverTime.getTime()>=end.getTime()&&<a className="primary" style={{display:"inline-block",marginTop:10,textDecoration:"none"}} href={"/dashboard/records?lessonId="+encodeURIComponent(selectedLesson.id)}>Complete Report</a>}{u.role==="STUDENT"&&serverTime.getTime()>=end.getTime()&&(
+  selectedLesson.status==="MISSED_BY_TEACHER" || selectedLesson.status==="MISSED_BY_TEACHER_AND_STUDENT"
+    ? <div className="session-rating"><div><strong>No need to rate</strong></div></div>
+    : selectedLesson.status!=="NO_SHOW"&&!selectedLesson.student_cancelled_late
+      ? <div className="session-rating"><div>Rate your teacher</div><div>{Array.from({length:10},(_,i)=><button key={i} type="button" onClick={()=>rateTeacher(selectedLesson.id,i+1)}>★</button>)}</div></div>
+      : null
+)}
                       </div>
                     </>;
                   })()}
