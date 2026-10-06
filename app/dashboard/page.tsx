@@ -23,6 +23,7 @@ export default function Dashboard() {
   const [adminMenuOpen, setAdminMenuOpen] = useState(false);
   const [branding, setBranding] = useState<any>(null);
   const [serverTime, setServerTime] = useState(new Date());
+  const [selectedLesson, setSelectedLesson] = useState<any>(null);
 
   async function loadNotifications() {
     if (u?.role !== "STUDENT") return;
@@ -248,13 +249,40 @@ export default function Dashboard() {
             <div className="session-list">
               {lessons.filter(l=>l.status!=="CANCELLED").map((l)=>{
                 const d=new Date(l.starts_at);
-                return <div className={`session-row ${u.role === "STUDENT" ? "session-student" : "session-teacher"}`} key={l.id}>
+                return <button type="button" className={`session-row ${u.role === "STUDENT" ? "session-student" : "session-teacher"}`} key={l.id} onClick={() => setSelectedLesson(l)}>
                   <span>{d.toLocaleDateString("sv-SE")} {d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</span>
-
-                </div>;
+                </button>;
               })}
               {lessons.filter(l=>l.status!=="CANCELLED").length===0 && <div className="session-empty">No scheduled sessions.</div>}
             </div>
+            {selectedLesson && (
+              <div className="session-detail-overlay" onClick={() => setSelectedLesson(null)}>
+                <div className="session-detail-panel" onClick={(e) => e.stopPropagation()}>
+                  <button type="button" className="session-detail-close" onClick={() => setSelectedLesson(null)}>×</button>
+                  {(() => {
+                    const start = new Date(selectedLesson.starts_at);
+                    const end = new Date(selectedLesson.ends_at);
+                    const enterAt = start.getTime() - 10 * 60 * 1000;
+                    const canEnter = serverTime.getTime() >= enterAt && serverTime.getTime() < end.getTime();
+                    return <>
+                      <h2>{u.role === "TEACHER" ? "Class Details" : "Lesson Details"}</h2>
+                      <div className="session-detail-grid">
+                        <div><span>ID</span><strong>{selectedLesson.class_id || "—"}</strong></div>
+                        <div><span>Level</span><strong>{selectedLesson.student_level || "—"}</strong></div>
+                        <div><span>Teaching Material</span><strong>{selectedLesson.material_title || "—"}</strong></div>
+                        <div><span>Start Time</span><strong>{start.toLocaleString("sv-SE").replace("T"," ")}</strong></div>
+                        <div><span>End Time</span><strong>{end.toLocaleString("sv-SE").replace("T"," ")}</strong></div>
+                        <div><span>{u.role === "TEACHER" ? "Student" : "Teacher"}</span><strong>{u.role === "TEACHER" ? selectedLesson.student_name : selectedLesson.teacher_name}</strong></div>
+                        {u.role === "TEACHER" && <div><span>Age</span><strong>{selectedLesson.student_age ?? "—"}</strong></div>}
+                      </div>
+                      <div className="session-enter-area">
+                        {canEnter ? <a className="session-enter-button" href={"/classroom/"+selectedLesson.room_code}>Enter classroom</a> : <div className="session-enter-wait">Enter classroom will appear exactly 10 minutes before the class starts.</div>}
+                      </div>
+                    </>;
+                  })()}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>
