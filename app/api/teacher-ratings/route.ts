@@ -69,7 +69,7 @@ export async function POST(req:Request){
   if(!l.rowCount)return NextResponse.json({error:"Lesson not found."},{status:404});
   const lesson=l.rows[0];
   if(lesson.student_id!==s.id)return NextResponse.json({error:"You can only rate your own lessons."},{status:403});
-  if(lesson.status==="CANCELLED"||new Date(lesson.ends_at).getTime()>Date.now())return NextResponse.json({error:"This lesson cannot be rated yet."},{status:409});
+  if(lesson.status==="CANCELLED"||lesson.student_cancelled_late===true||lesson.status==="NO_SHOW"||new Date(lesson.ends_at).getTime()>Date.now())return NextResponse.json({error:"This lesson cannot be rated."},{status:409});
   const r=await query("INSERT INTO teacher_ratings(lesson_id,student_id,teacher_id,rating,opinion) VALUES($1,$2,$3,$4,$5) ON CONFLICT(lesson_id) DO UPDATE SET rating=EXCLUDED.rating,opinion=EXCLUDED.opinion,updated_at=now() RETURNING *",[lesson.id,s.id,lesson.teacher_id,rating,String(b.opinion||"")]);
   return NextResponse.json(r.rows[0]);
 }
