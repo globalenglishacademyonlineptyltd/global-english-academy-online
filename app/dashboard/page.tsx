@@ -24,6 +24,12 @@ export default function Dashboard() {
   const [branding, setBranding] = useState<any>(null);
   const [serverTime, setServerTime] = useState(new Date());
   const [selectedLesson, setSelectedLesson] = useState<any>(null);
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Johannesburg" });
+  const [searchStartDate, setSearchStartDate] = useState(today);
+  const [searchEndDate, setSearchEndDate] = useState(today);
+  const [searchTeacherId, setSearchTeacherId] = useState("");
+  const [searchStudentId, setSearchStudentId] = useState("");
+  const [adminSearchLoading, setAdminSearchLoading] = useState(false);
   async function rateTeacher(lessonId:string,rating:number){await fetch("/api/teacher-ratings",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId,rating})});}
 
   async function loadNotifications() {
@@ -55,7 +61,8 @@ export default function Dashboard() {
         else setU(j.user);
       });
 
-    fetch("/api/lessons", { cache: "no-store" })
+    const lessonParams = new URLSearchParams({ startDate: today, endDate: today });
+    fetch("/api/lessons?" + lessonParams.toString(), { cache: "no-store" })
       .then((x) => (x.ok ? x.json() : []))
       .then(setLessons);
     fetch("/api/materials", { cache: "no-store" })
@@ -73,6 +80,34 @@ export default function Dashboard() {
     const timer = setInterval(() => setServerTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  async function searchAdminLessons() {
+    if (u?.role !== "ADMIN" || !searchStartDate || !searchEndDate) return;
+    setAdminSearchLoading(true);
+    try {
+      const p = new URLSearchParams({ startDate: searchStartDate, endDate: searchEndDate });
+      if (searchTeacherId) p.set("teacherId", searchTeacherId);
+      if (searchStudentId) p.set("studentId", searchStudentId);
+      const x = await fetch("/api/lessons?" + p.toString(), { cache: "no-store" });
+      if (x.ok) setLessons(await x.json());
+    } finally {
+      setAdminSearchLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (u?.role !== "ADMIN") return;
+    const timer = setInterval(() => {
+      const p = new URLSearchParams({ startDate: searchStartDate, endDate: searchEndDate });
+      if (searchTeacherId) p.set("teacherId", searchTeacherId);
+      if (searchStudentId) p.set("studentId", searchStudentId);
+      fetch("/api/lessons?" + p.toString(), { cache: "no-store" })
+        .then((x) => (x.ok ? x.json() : []))
+        .then(setLessons)
+        .catch(() => {});
+    }, 30000);
+    return () => clearInterval(timer);
+  }, [u?.role, searchStartDate, searchEndDate, searchTeacherId, searchStudentId]);
 
   useEffect(() => {
     if (u?.role !== "TEACHER" && u?.role !== "STUDENT") return;
@@ -220,10 +255,24 @@ export default function Dashboard() {
             </div>
             <div className="section">
               <h2>Lessons</h2>
+              <form className="card" onSubmit={(e) => { e.preventDefault(); searchAdminLessons(); }} style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(150px,1fr))",gap:12,alignItems:"end",marginBottom:16}}>
+                <label>Start Date (required)<input className="input" type="date" required value={searchStartDate} onChange={(e)=>setSearchStartDate(e.target.value)} /></label>
+                <label>End Date (required)<input className="input" type="date" required value={searchEndDate} onChange={(e)=>setSearchEndDate(e.target.value)} /></label>
+                <label>Teacher (optional)<select className="input" value={searchTeacherId} onChange={(e)=>setSearchTeacherId(e.target.value)}><option value="">All teachers</option>{teachers.map((t)=><option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
+                <label>Student (optional)<select className="input" value={searchStudentId} onChange={(e)=>setSearchStudentId(e.target.value)}><option value="">All students</option>{students.map((s)=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
+                <button className="primary" type="submit" disabled={adminSearchLoading} style={{gridColumn:"1 / -1",justifySelf:"start"}}>{adminSearchLoading ? "Searching…" : "Submit"}</button>
+              </form>
               <table className="table">
                 <thead><tr><th>Date</th><th>Time</th><th>Teacher</th><th>Student</th><th>Status</th></tr></thead>
-                <tbody>{lessons.map((l)=><tr key={l.id}><td>{new Date(l.starts_at).toLocaleDateString()}</td><td>{new Date(l.starts_at).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</td><td>{l.teacher_name}</td><td>{l.student_name}</td><td><span className="badge">{l.status==="CANCELLED"?"CANCELLED":l.status}</span></td></tr>)}</tbody>
+                <tbody>{lessons.map((l)=><tr key={l.id}>
+                  <td>{new Date(l.starts_at).toLocaleDateString()}</td>
+                  <td>{new Date(l.starts_at).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</td>
+                  <td>{l.teacher_name}</td>
+                  <td>{l.student_name}</td>
+                  <td><span className="badge">{l.status==="CANCELLED"?"CANCELLED":l.status==="MISSED_BY_TEACHER_AND_STUDENT"?"MISSED BY TEACHER AND STUDENT":l.status==="MISSED_BY_TEACHER"?"MISSED BY TEACHER":l.status==="NO_SHOW"?"MISSED BY STUDENT":l.status}</span></td>
+                </tr>)}</tbody>
               </table>
+              {lessons.length===0 && <div className="session-empty">No lessons found for the selected dates.</div>}
             </div>
           </>
         ) : (
