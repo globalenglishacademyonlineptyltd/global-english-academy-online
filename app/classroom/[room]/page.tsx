@@ -94,6 +94,7 @@ export default function Classroom(){
 
 
  useEffect(()=>{if(!lesson||!me||me.role==="ADMIN")return;const beat=()=>signal({type:"presence"});beat();const id=setInterval(beat,15000);return()=>clearInterval(id)},[lesson,me]);
+ useEffect(()=>{if(!lesson||me?.role!=="TEACHER")return;const ms=new Date(lesson.ends_at).getTime()-Date.now();if(ms<=0)return;const id=setTimeout(()=>{fetch("/api/classroom-complete",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:lesson.id})}).catch(()=>{})},ms+1000);return()=>clearTimeout(id)},[lesson,me]);
  useEffect(()=>{if(!recording)return;const t=setInterval(()=>{if(recordStarted.current)setRecordTime(Math.floor((Date.now()-recordStarted.current)/1000));},1000);return()=>clearInterval(t);},[recording]);
 
  const startRecording=()=>{
