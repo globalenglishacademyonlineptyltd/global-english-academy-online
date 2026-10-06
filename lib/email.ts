@@ -67,11 +67,8 @@ export async function sendBookingEmails(d:{teacherEmail:string;teacherName:strin
   const reminderText="NOTICE: You have a class on "+shortDate+" "+time+":00(in your timezone GMT+02)! Please start the class on time. Thanks!\n\n[Class] : "+classLabel+"\n[Student] : "+d.studentName+"\n[Lesson] : "+lesson+(join?"\n\nPlease sign in to enter the classroom.":"");
   const oneDay=new Date(new Date(d.startsAt).getTime()-24*60*60*1000).toISOString();
   const oneHour=new Date(new Date(d.startsAt).getTime()-60*60*1000).toISOString();
-  const ids=await Promise.all([d.teacherEmail,d.studentEmail].flatMap(email=>[
-    scheduleEmail(email,"NOTICE: Class on "+shortDate+" (1 day reminder)",reminderText,oneDay),
-    scheduleEmail(email,"NOTICE: Class on "+shortDate+" "+time+" (1 hour reminder)",reminderText,oneHour)
-  ]));
-  return {reminder24hIds:ids.filter(Boolean).filter((_,i)=>i%2===0),reminder1hIds:ids.filter(Boolean).filter((_,i)=>i%2===1)};
+  const pairs=await Promise.all([d.teacherEmail,d.studentEmail].map(async email=>({d1:await scheduleEmail(email,"NOTICE: Class on "+shortDate+" (1 day reminder)",reminderText,oneDay),h1:await scheduleEmail(email,"NOTICE: Class on "+shortDate+" "+time+" (1 hour reminder)",reminderText,oneHour)})));
+  return {reminder24hIds:pairs.map(x=>x.d1).filter(Boolean),reminder1hIds:pairs.map(x=>x.h1).filter(Boolean)};
 }
 
 export async function sendCancellationEmails(d:{teacherEmail:string;teacherName:string;studentEmail:string;studentName:string;startsAt:string}){
