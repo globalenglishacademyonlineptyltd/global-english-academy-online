@@ -112,6 +112,7 @@ export default function Dashboard() {
           ["Cancellation Requests", "/dashboard/cancellations"],
           ["Teacher Leave Requests", "/dashboard/teacher-leave"],
           ["Teacher Availability", "/dashboard/teacher-availability"],
+          ["Open Weekly Slots", "/dashboard/open-weekly-slots"],
           ["Teacher Score", "/dashboard/teacher-score"],
           ["Materials", "/dashboard/materials"],
           ["Recordings", "/dashboard/recordings"],
