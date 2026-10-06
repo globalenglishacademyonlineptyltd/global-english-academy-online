@@ -3,7 +3,7 @@ import TeacherShell from "../_components/TeacherShell";
 import{useEffect,useState}from"react";
 export default function Score(){const[rows,setRows]=useState<any[]>([]),[stats,setStats]=useState<any[]>([]),[trend,setTrend]=useState<any>({}),[totals,setTotals]=useState<any>({total_lessons:0,completed_lessons:0}),[start,setStart]=useState(""),[end,setEnd]=useState("");
 async function load(){const p=new URLSearchParams();if(start)p.set("start",start);if(end)p.set("end",end);const x=await fetch("/api/teacher-ratings?"+p.toString(),{cache:"no-store"});if(x.ok){const j=await x.json();setRows(j.rows||[]);setStats(j.stats||[]);setTrend(j.trend||{});setTotals(j.totals||{total_lessons:0,completed_lessons:0})}}
-useEffect(()=>{load()},[]);
+useEffect(()=>{load();const timer=setInterval(load,15000);return()=>clearInterval(timer)},[start,end]);
 const counts=Array.from({length:10},(_,i)=>stats.find(s=>Number(s.rating)===i+1)?.count||0);
 return <TeacherShell active="Score"><main className="teacher-page"><div className="topbar"><div><h1>Score</h1><div className="muted">Student ratings of your teaching performance.</div></div><div style={{textAlign:"right"}}><div className="muted">All lessons</div><div style={{fontSize:28,fontWeight:800}}>{totals.total_lessons||0}</div><div className="muted">Completed lessons: <strong>{totals.completed_lessons||0}</strong></div></div></div>
 <div className="card section"><h3>Total Statistical</h3><table className="table"><thead><tr>{counts.map((_,i)=><th key={i} style={{textAlign:"center"}}>{i+1}</th>)}</tr></thead><tbody><tr>{counts.map((n,i)=><td key={i} style={{textAlign:"center"}}>{n}</td>)}</tr></tbody></table>
