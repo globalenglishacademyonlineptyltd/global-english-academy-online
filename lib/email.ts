@@ -81,3 +81,13 @@ export async function sendCancellationEmails(d:{teacherEmail:string;teacherName:
     sendEmail(d.teacherEmail,"Lesson cancelled — Global English Academy","Hello "+d.teacherName+",\n\nYour English lesson with "+d.studentName+" on "+date+" has been cancelled after Admin approval.\n\nGlobal English Academy")
   ]);
 }
+
+export async function sendStudentCancellationTeacherEmail(d:{teacherEmail:string;teacherName:string;studentName:string;startsAt:string;lessonTitle?:string;lessonType?:string}){
+  const tz=process.env.SCHOOL_TIMEZONE||"Africa/Johannesburg";
+  const date=new Date(d.startsAt).toLocaleDateString("en-CA",{timeZone:tz});
+  const time=new Date(d.startsAt).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",hour12:false,timeZone:tz});
+  const type=d.lessonType==="DEMO"?"Demo":d.lessonType==="FERRIS_WHEEL"?"Ferris Wheel":"Reg";
+  const subject="[Cancel] ["+type+"] "+date+" "+time+"(GMT+02) - "+d.studentName;
+  const text="[Class] : "+type+"\n[Date, Time] : "+date+" "+time+":00(GMT+02)\n[Student] : "+d.studentName+"\n[Lesson] : "+(d.lessonTitle||"English Lesson")+"\n\nThe student cancelled this lesson through Global English Academy.";
+  return sendEmail(d.teacherEmail,subject,text);
+}
