@@ -23,6 +23,7 @@ export async function POST(req:Request){
   const roomCode=String(body.roomCode||"");
   const payload=body.payload;
   if(!roomCode||!payload)return NextResponse.json({error:"roomCode and payload are required."},{status:400});
+  if(payload?.type==="chat")return NextResponse.json({error:"Direct teacher-student chat is disabled."},{status:403});
   if(JSON.stringify(payload).length>200000)return NextResponse.json({error:"Signal payload is too large."},{status:413});
   const lesson=await query<any>("SELECT id,teacher_id,student_id FROM lessons WHERE room_code=$1",[roomCode]);
   if(!lesson.rowCount)return NextResponse.json({error:"Classroom not found."},{status:404});
