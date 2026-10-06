@@ -96,18 +96,22 @@ export default function Dashboard() {
   }
 
   useEffect(() => {
-    if (u?.role !== "ADMIN") return;
+    if (!u?.role) return;
     const timer = setInterval(() => {
-      const p = new URLSearchParams({ startDate: searchStartDate, endDate: searchEndDate });
-      if (searchTeacherId) p.set("teacherId", searchTeacherId);
-      if (searchStudentId) p.set("studentId", searchStudentId);
+      const p = new URLSearchParams({ startDate: today, endDate: today });
+      if (u.role === "ADMIN") {
+        p.set("startDate", searchStartDate);
+        p.set("endDate", searchEndDate);
+        if (searchTeacherId) p.set("teacherId", searchTeacherId);
+        if (searchStudentId) p.set("studentId", searchStudentId);
+      }
       fetch("/api/lessons?" + p.toString(), { cache: "no-store" })
         .then((x) => (x.ok ? x.json() : []))
         .then(setLessons)
         .catch(() => {});
-    }, 30000);
+    }, 15000);
     return () => clearInterval(timer);
-  }, [u?.role, searchStartDate, searchEndDate, searchTeacherId, searchStudentId]);
+  }, [u?.role, searchStartDate, searchEndDate, searchTeacherId, searchStudentId, today]);
 
   useEffect(() => {
     if (u?.role !== "TEACHER" && u?.role !== "STUDENT") return;
