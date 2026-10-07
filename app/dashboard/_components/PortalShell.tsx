@@ -9,6 +9,19 @@ const adminNav=[["Dashboard","/dashboard"],["Add/Remove Teacher","/dashboard/tea
 const teacherNav=[["My Session","/dashboard"],["Teaching Record","/dashboard/records"],["Booking Time","/dashboard/availability"],["Score","/dashboard/score"],["Training","/dashboard/training"],["Comm Centre","/dashboard/comm-center"],["Personal Information","/dashboard/profile"],["Change Password","/change-password"]];
 const studentNav=[["My Lessons","/dashboard"],["Book a Lesson","/dashboard/book"],["Lesson History","/dashboard/records"],["Rate Teachers","/dashboard/rate-teachers"],["Comm Centre","/dashboard/comm-center"],["Personal Information","/dashboard/profile"],["Change Password","/change-password"]];
 
+function pageTitle(path:string,u:U){
+ if(path==="/dashboard")return u.role==="ADMIN"?`Welcome, ${u.name}`:"My Session";
+ const titles:[[string,string],...Array<[string,string]>]=[
+  ["/dashboard/teachers","Add / Remove Teacher"],["/dashboard/students","Add / Remove Students"],["/dashboard/view-teachers","View Teachers"],["/dashboard/view-students","View Students"],
+  ["/dashboard/deleted-teachers","Deleted Teacher Histories"],["/dashboard/deleted-students","Deleted Student Histories"],["/dashboard/lessons","Lessons"],["/dashboard/calendar","Global Calendar"],
+  ["/dashboard/cancellations","Cancellation Requests"],["/dashboard/teacher-leave","Teacher Leave Requests"],["/dashboard/teacher-availability","Teacher Availability"],["/dashboard/open-weekly-slots","Open Weekly Slots"],
+  ["/dashboard/teacher-score","Teacher Score"],["/dashboard/materials","Materials"],["/dashboard/recordings","Recordings"],["/dashboard/branding","School Branding"],["/dashboard/comm-center","Comm Centre"],
+  ["/dashboard/records",u.role==="STUDENT"?"Lesson History":"Teaching Record"],["/dashboard/availability","Booking Time"],["/dashboard/score","Score"],["/dashboard/training","Training"],
+  ["/dashboard/profile","Personal Information"],["/dashboard/book","Book a Lesson"],["/dashboard/rate-teachers","Rate Teachers"],["/change-password","Change Password"]
+ ];
+ return titles.find(([p])=>path===p)?.[1]||"Global English Academy";
+}
+
 export default function PortalShell({children}:{children:React.ReactNode}){
  const[u,setU]=useState<U|null>(null),[branding,setBranding]=useState<any>(null),[open,setOpen]=useState(false);
  const wrap=useRef<HTMLDivElement>(null),pathname=usePathname();
@@ -19,6 +32,8 @@ export default function PortalShell({children}:{children:React.ReactNode}){
  if(!u)return <>{children}</>;
  const nav=u.role==="ADMIN"?adminNav:u.role==="TEACHER"?teacherNav:studentNav;
  const roleClass=u.role==="ADMIN"?"portal-admin":u.role==="TEACHER"?"portal-teacher":"portal-student";
+ const title=pageTitle(pathname,u);
+ const kicker=u.role==="ADMIN"?"SCHOOL ADMINISTRATION":u.role==="TEACHER"?"TEACHER PORTAL":"STUDENT PORTAL";
  return <div className={roleClass}>
    <div ref={wrap} className="global-portal-menu-wrap">
      <button type="button" className="global-portal-menu-button" onClick={()=>setOpen(v=>!v)} aria-expanded={open} aria-label="Open menu"><span>☰</span></button>
@@ -29,6 +44,11 @@ export default function PortalShell({children}:{children:React.ReactNode}){
      </div>}
    </div>
    <div className="global-portal-brand">{branding?.logo_data?<img src={branding.logo_data} alt="Global English Academy Online"/>:<strong>GEA</strong>}</div>
-   {children}
+   <div className="global-portal-top-space" aria-hidden="true"/>
+   <header className="global-portal-header">
+     <div className="global-portal-header-title"><div className="portal-kicker">{kicker}</div><h1>{title}</h1>{u.role==="ADMIN"&&pathname==="/dashboard"&&<div className="muted">School administration</div>}</div>
+     <div className="teacher-chip global-portal-user"><span className="teacher-avatar">{u.name?.slice(0,1).toUpperCase()}</span><span><strong>{u.name}</strong><small>{u.email}</small></span></div>
+   </header>
+   <main className="global-portal-page">{children}</main>
  </div>;
 }
