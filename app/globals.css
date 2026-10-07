@@ -219,3 +219,28 @@ body{background:#f5f8fc}
 .session-rating{margin-top:16px;text-align:center;font-size:12px;color:#475569}
 .session-rating button{border:0;background:transparent;padding:1px;cursor:pointer;font-size:26px;color:#cbd5e1}
 .session-rating button:hover{color:#facc15}
+
+/* Shared portal menu: available on every authenticated dashboard page. */
+.global-portal-menu-wrap{position:fixed;left:20px;top:18px;z-index:5000}
+.global-portal-menu-button{width:42px;height:42px;min-width:42px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:10px;color:#fff;border:1px solid;font-size:21px;font-weight:850;box-shadow:0 5px 16px rgba(15,23,42,.18)}
+.portal-admin .global-portal-menu-button{background:#84cc16;border-color:#65a30d}
+.portal-teacher .global-portal-menu-button{background:#8b5cf6;border-color:#7c3aed}
+.portal-student .global-portal-menu-button{background:#2563eb;border-color:#1d4ed8}
+.global-portal-menu-button:hover{filter:brightness(.96)}
+.global-portal-dropdown{position:absolute;left:0;top:48px;width:260px;max-height:calc(100vh - 70px);overflow:auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 18px 45px rgba(15,23,42,.2);padding:8px}
+.global-portal-dropdown-title{padding:10px;color:#172033;font-size:12px;font-weight:850;border-bottom:1px solid #eef2f7;margin-bottom:4px}
+.global-portal-dropdown a,.global-portal-dropdown button{display:block;width:100%;padding:10px 11px;border:0;border-radius:8px;background:transparent;color:#334155;text-align:left;font-size:12px;font-weight:650;text-decoration:none}
+.portal-admin .global-portal-dropdown a:hover,.portal-admin .global-portal-dropdown a.active{background:#f0fdf4;color:#4d7c0f;box-shadow:inset 3px 0 0 #84cc16}
+.portal-teacher .global-portal-dropdown a:hover,.portal-teacher .global-portal-dropdown a.active{background:#f3e8ff;color:#6d28d9;box-shadow:inset 3px 0 0 #8b5cf6}
+.portal-student .global-portal-dropdown a:hover,.portal-student .global-portal-dropdown a.active{background:#eff6ff;color:#1d4ed8;box-shadow:inset 3px 0 0 #2563eb}
+.global-portal-dropdown button{margin-top:4px;color:#b91c1c}.global-portal-dropdown button:hover{background:#fef2f2}
+.global-portal-brand{position:fixed;left:78px;top:14px;width:92px;height:92px;z-index:4900;display:flex;align-items:center;justify-content:center;padding:5px;background:rgba(255,255,255,.97);border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,.10);color:#2563eb;font-size:18px}
+.portal-admin .global-portal-brand{border-color:#bef264}.portal-teacher .global-portal-brand{border-color:#ddd6fe}.portal-student .global-portal-brand{border-color:#bfdbfe}
+.global-portal-brand img{width:82px;height:82px;object-fit:contain;display:block;border-radius:8px;background:#fff}
+.teacher-page-shell .portal-content{padding-top:0}
+@media(max-width:640px){
+ .global-portal-menu-wrap{left:14px;top:14px}
+ .global-portal-dropdown{width:min(260px,calc(100vw - 24px))}
+ .global-portal-brand{left:70px;top:10px;width:72px;height:72px;padding:4px}
+ .global-portal-brand img{width:64px;height:64px}
+}
