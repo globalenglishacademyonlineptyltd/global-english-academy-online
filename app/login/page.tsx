@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -11,6 +11,24 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    const checkSession = () => {
+      fetch("/api/me", { cache: "no-store" })
+        .then((r) => r.json())
+        .then((j) => {
+          if (alive && j.user) router.replace("/dashboard");
+        })
+        .catch(() => {});
+    };
+    checkSession();
+    window.addEventListener("pageshow", checkSession);
+    return () => {
+      alive = false;
+      window.removeEventListener("pageshow", checkSession);
+    };
+  }, [router]);
+
 
   async function submit() {
     setError("");
