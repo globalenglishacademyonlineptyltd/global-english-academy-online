@@ -20,7 +20,6 @@ export default function Dashboard() {
   const [cancellations, setCancellations] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [submitting, setSubmitting] = useState<string | null>(null);
-  const [adminMenuOpen, setAdminMenuOpen] = useState(false);
   const [branding, setBranding] = useState<any>(null);
   const [serverTime, setServerTime] = useState(new Date());
   const [selectedLesson, setSelectedLesson] = useState<any>(null);
@@ -146,101 +145,10 @@ export default function Dashboard() {
     return null;
   }
 
-  const nav =
-    u.role === "ADMIN"
-      ? [
-          ["Dashboard", "/dashboard"],
-          ["Add/Remove Teacher", "/dashboard/teachers"],
-          ["Add/Remove Students", "/dashboard/students"],
-          ["View Teachers", "/dashboard/view-teachers"],
-          ["View Students", "/dashboard/view-students"],
-          ["Deleted Teacher Histories", "/dashboard/deleted-teachers"],
-          ["Deleted Student Histories", "/dashboard/deleted-students"],
-          ["Lessons", "/dashboard/lessons"],
-          ["Global Calendar", "/dashboard/calendar"],
-          ["Cancellation Requests", "/dashboard/cancellations"],
-          ["Teacher Leave Requests", "/dashboard/teacher-leave"],
-          ["Teacher Availability", "/dashboard/teacher-availability"],
-          ["Open Weekly Slots", "/dashboard/open-weekly-slots"],
-          ["Teacher Score", "/dashboard/teacher-score"],
-          ["Materials", "/dashboard/materials"],
-          ["Recordings", "/dashboard/recordings"],
-          ["School Branding", "/dashboard/branding"],
-          ["Comm Centre", "/dashboard/comm-center"],
-          ["Change Password", "/change-password"],
-        ]
-      : u.role === "TEACHER"
-        ? [
-            ["My Session", "/dashboard"],
-            ["Teaching Record", "/dashboard/records"],
-            ["Score", "/dashboard/score"],
-            ["Booking Time", "/dashboard/availability"],
-            ["Training", "/dashboard/training"],
-            ["Comm Centre", "/dashboard/comm-center"],
-            ["Personal Information", "/dashboard/profile"],
-            ["Change Password", "/change-password"],
-          ]
-        : [
-            ["My Lessons", "/dashboard"],
-            ["Book a Lesson", "/dashboard/book"],
-            ["Lesson History", "/dashboard/records"],
-            ["Rate Teachers", "/dashboard/rate-teachers"],
-            ["Comm Centre", "/dashboard/comm-center"],
-            ["Personal Information", "/dashboard/profile"],
-            ["Change Password", "/change-password"],
-          ];
 
   return (
     <div className={`shell ${u.role === "ADMIN" ? "admin-shell" : ""}`}>
-      {u.role === "ADMIN" ? (
-        <div className="admin-menu-wrap">
-          <button className="admin-menu-button" onClick={() => setAdminMenuOpen((v) => !v)} aria-expanded={adminMenuOpen}>
-            <span className="admin-menu-icon">☰</span>
-            <span>Menu</span>
-            <span className="admin-menu-chevron">{adminMenuOpen ? "▲" : "▼"}</span>
-          </button>
-          {adminMenuOpen && (
-            <div className="admin-dropdown">
-              <div className="admin-dropdown-title">Global English Academy</div>
-              {nav.map(([a, b]) => (
-                <Link key={b} href={b} onClick={() => setAdminMenuOpen(false)}>
-                  {a}
-                </Link>
-              ))}
-              <button onClick={logout}>Sign out</button>
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className={`role-menu-wrap ${u.role === "TEACHER" ? "teacher-role-menu" : "student-role-menu"}`}>
-          <button
-            className="role-menu-button"
-            onClick={() => setAdminMenuOpen((v) => !v)}
-            aria-expanded={adminMenuOpen}
-          >
-            <span className="role-menu-icon">☰</span>
-            <span>Menu</span>
-            <span className="role-menu-chevron">{adminMenuOpen ? "▲" : "▼"}</span>
-          </button>
-          {adminMenuOpen && (
-            <div className="role-dropdown">
-              <div className="role-dropdown-title">Global English Academy</div>
-              {nav.map(([a, b]) => (
-                <Link key={b} href={b} onClick={() => setAdminMenuOpen(false)}>
-                  {a}
-                </Link>
-              ))}
-              <button onClick={logout}>Sign out</button>
-            </div>
-          )}
-        </div>
-      )}
 
-      {branding?.logo_data && (
-        <div className={`role-brand-logo ${u.role === "ADMIN" ? "admin-role-logo" : u.role === "TEACHER" ? "teacher-role-logo" : "student-role-logo"}`}>
-          <img src={branding.logo_data} alt="Global English Academy Online" />
-        </div>
-      )}
 
       <main className="main">
         {u.role === "ADMIN" ? (
