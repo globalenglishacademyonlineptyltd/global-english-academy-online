@@ -256,3 +256,50 @@ body{background:#f5f8fc}
  .teacher-page-shell .teacher-chip{position:static;margin-top:10px;justify-content:center}
  .teacher-page-shell .portal-header>div:first-child{width:auto}
 }
+
+/* Unified portal frame: match the approved Booking Time reference across every portal page. */
+.global-portal-top-space{height:126px;background:linear-gradient(180deg,#f7faff 0%,#f3f7fc 100%);}
+.global-portal-header{height:78px;background:#fff;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:center;text-align:center;position:relative;padding:0 28px;}
+.global-portal-header-title{min-width:0;}
+.global-portal-header-title h1{margin:0;color:#172033;font-size:22px;line-height:1.15;font-weight:800;}
+.global-portal-header-title .portal-kicker{font-size:9px;font-weight:850;letter-spacing:.16em;color:#4f78a8;margin-bottom:4px;}
+.global-portal-header-title .muted{font-size:10px;margin-top:3px;}
+.global-portal-user{position:absolute;right:18px;top:50%;transform:translateY(-50%);}
+.global-portal-page{min-height:calc(100vh - 204px);padding:70px 15px 34px;background:#f5f8fc;}
+.global-portal-page>.teacher-page{width:100%;max-width:1200px;margin:0 auto;padding:0;}
+.global-portal-page>.main{width:100%;max-width:1200px;margin:0 auto;padding:0;}
+.global-portal-page>.shell{min-height:0;background:transparent;}
+.global-portal-page>.shell>.main{width:100%;max-width:1200px;margin:0 auto;padding:0;}
+.global-portal-page>.shell .admin-shell{background:transparent;}
+.global-portal-page>.shell .topbar{display:none;}
+.global-portal-page>.shell .session-links{display:none;}
+.global-portal-page>.shell .session-heading{display:none;}
+.global-portal-page>.shell .session-page{width:100%;max-width:1200px;}
+.global-portal-page>.shell .session-server-time{margin-top:0;}
+.global-portal-page>.shell .session-note{margin-bottom:14px;}
+.global-portal-page>.shell .grid{margin-top:0;}
+.global-portal-page>.shell .section:first-of-type{margin-top:18px;}
+.global-portal-page>.login{min-height:auto;padding:0;}
+.global-portal-page>.login .login-card{margin:0 auto;}
+.global-portal-page>.teacher-page-shell{min-height:0;background:transparent;}
+.global-portal-page>.teacher-page-shell>.portal-content{padding:0;}
+.global-portal-page>.teacher-page-shell .portal-header{display:none;}
+.global-portal-page>.teacher-page-shell .teacher-page{padding:0;}
+.global-portal-page>.teacher-page-shell .teacher-page-shell{padding:0;}
+.global-portal-menu-wrap{left:7px;top:13px;}
+.global-portal-brand{left:65px;top:8px;width:92px;height:92px;}
+@media(max-width:640px){
+ .global-portal-top-space{height:110px;}
+ .global-portal-header{height:78px;padding:0 14px;}
+ .global-portal-page{min-height:calc(100vh - 188px);padding:54px 12px 28px;}
+ .global-portal-user{position:static;transform:none;margin-left:auto;}
+ .global-portal-header-title h1{font-size:19px;}
+ .global-portal-header-title .portal-kicker{font-size:8px;}
+ .global-portal-header-title .muted{display:none;}
+ .global-portal-page>.teacher-page{max-width:none;}
+ .global-portal-page>.main{max-width:none;}
+ .global-portal-menu-wrap{left:7px;top:13px;}
+ .global-portal-brand{left:65px;top:8px;width:78px;height:78px;}
+ .global-portal-brand img{width:68px;height:68px;}
+ .global-portal-page>.shell>.main{max-width:none;}
+}
