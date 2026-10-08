@@ -1,7 +1,7 @@
 import{NextResponse}from"next/server";import{query}from"@/lib/db";import{requireRole}from"@/lib/auth";
 
 export async function GET(req:Request){
- const s=await requireRole(["ADMIN","TEACHER","STUDENT"]);
+ const s=await requireRole(["ADMIN"]);
  const p=new URL(req.url).searchParams,materialId=p.get("materialId");
  if(!materialId)return NextResponse.json({error:"Material is required."},{status:400});
  const r=await query<any>("SELECT id,title,content_data,url,mime_type FROM materials WHERE id=$1",[materialId]);
