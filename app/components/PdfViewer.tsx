@@ -1,4 +1,3 @@
-
 "use client";
 
 import {useEffect,useRef,useState} from "react";
@@ -13,8 +12,8 @@ export default function PdfViewer({src,title="PDF material"}:Props){
    async function render(){
      try{
        setLoading(true);setError("");setPage(1);setPages(0);
-       const pdfjs:any=await import("pdfjs-dist/legacy/build/pdf.mjs");
-       pdfjs.GlobalWorkerOptions.workerSrc=new URL("pdfjs-dist/legacy/build/pdf.worker.min.mjs",import.meta.url).toString();
+       const pdfjs:any=await import("pdfjs-dist/legacy/build/pdf");
+       pdfjs.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
        const task=pdfjs.getDocument({url:src,withCredentials:true});
        const pdf=await task.promise;
        if(cancelled)return;
