@@ -269,13 +269,13 @@ export default function Dashboard() {
                   })()}
                 </div>
               </div>
-              {teacherWorkbook && <div className="gc-modal-backdrop" onContextMenu={(e)=>e.preventDefault()} onClick={()=>setTeacherWorkbook(null)}>
+              <>{teacherWorkbook && <div className="gc-modal-backdrop" onContextMenu={(e)=>e.preventDefault()} onClick={()=>setTeacherWorkbook(null)}>
                 <div className="gc-material-modal" onClick={(e)=>e.stopPropagation()}>
                   <div className="gc-modal-head"><h2>📖 {teacherWorkbook.title}</h2><button type="button" onClick={()=>setTeacherWorkbook(null)}>Close</button></div>
                   <div className="gc-material-frame"><PdfViewer src={"/api/lesson-materials/file?lessonId="+encodeURIComponent(teacherWorkbook.lessonId)+"&materialId="+encodeURIComponent(teacherWorkbook.materialId)} title={teacherWorkbook.title}/></div>
                   <p>Teacher preparation view only. This workbook is not available for download.</p>
                 </div>
-              </div>}
+              </div>}</>
             )}
           </div>
         )}
