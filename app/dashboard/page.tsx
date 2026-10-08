@@ -242,7 +242,7 @@ export default function Dashboard() {
                       <div className="session-detail-grid">
                         <div><span>ID</span><strong>{selectedLesson.class_id || "—"}</strong></div>
                         <div><span>Level</span><strong>{selectedLesson.student_level || "—"}</strong></div>
-                        <div><span>Teaching Material</span><strong>{selectedLesson.material_title || "—"}</strong></div>
+                        {u.role === "TEACHER" && <div><span>Teaching Material</span><strong>{selectedLesson.material_title || "—"}</strong></div>}
                         <div><span>Start Time</span><strong>{start.toLocaleString("sv-SE").replace("T"," ")}</strong></div>
                         <div><span>End Time</span><strong>{end.toLocaleString("sv-SE").replace("T"," ")}</strong></div>
                         <div><span>{u.role === "TEACHER" ? "Student" : "Teacher"}</span><strong>{u.role === "TEACHER" ? selectedLesson.student_name : selectedLesson.teacher_name}</strong></div>
