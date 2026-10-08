@@ -12,7 +12,7 @@ export default function PdfViewer({src,title="PDF material"}:Props){
    let cancelled=false;
    async function render(){
      try{
-       setLoading(true);setError("");
+       setLoading(true);setError("");setPage(1);setPages(0);
        const pdfjs:any=await import("pdfjs-dist/legacy/build/pdf.mjs");
        pdfjs.GlobalWorkerOptions.workerSrc=new URL("pdfjs-dist/legacy/build/pdf.worker.min.mjs",import.meta.url).toString();
        const task=pdfjs.getDocument({url:src,withCredentials:true});
