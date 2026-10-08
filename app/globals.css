@@ -303,3 +303,5 @@ body{background:#f5f8fc}
  .global-portal-brand img{width:68px;height:68px;}
  .global-portal-page>.shell>.main{max-width:none;}
 }
+
+.material-row{width:100%;text-align:left;background:#fff;color:inherit;font:inherit;cursor:pointer}.material-row:hover{background:#f8fafc}.material-row:disabled{cursor:default;opacity:.65}.material-view-action{margin-left:auto;font-size:11px;font-weight:800;color:#2563eb;white-space:nowrap}.material-row:disabled .material-view-action{color:#94a3b8}
