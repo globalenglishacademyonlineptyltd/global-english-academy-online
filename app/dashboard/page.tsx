@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import PdfViewer from "@/app/components/PdfViewer";
 
 type U = {
   id: string;
@@ -23,6 +24,7 @@ export default function Dashboard() {
   const [branding, setBranding] = useState<any>(null);
   const [serverTime, setServerTime] = useState(new Date());
   const [selectedLesson, setSelectedLesson] = useState<any>(null);
+  const [teacherWorkbook, setTeacherWorkbook] = useState<any>(null);
   const [teacherNotePrompt, setTeacherNotePrompt] = useState(false);
   const [teacherNoteRead, setTeacherNoteRead] = useState(false);
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Johannesburg" });
@@ -59,16 +61,20 @@ export default function Dashboard() {
       .then((x) => x.json())
       .then((j) => {
         if (!j.user) location.href = "/login";
-        else setU(j.user);
+        else {
+          setU(j.user);
+          if (j.user.role === "ADMIN") {
+            fetch("/api/materials", { cache: "no-store" })
+              .then((x) => (x.ok ? x.json() : []))
+              .then(setMaterials);
+          }
+        }
       });
 
     const lessonParams = new URLSearchParams({ startDate: today, endDate: today });
     fetch("/api/lessons?" + lessonParams.toString(), { cache: "no-store" })
       .then((x) => (x.ok ? x.json() : []))
       .then(setLessons);
-    fetch("/api/materials", { cache: "no-store" })
-      .then((x) => (x.ok ? x.json() : []))
-      .then(setMaterials);
     fetch("/api/students", { cache: "no-store" })
       .then((x) => (x.ok ? x.json() : []))
       .then(setStudents);
@@ -242,11 +248,12 @@ export default function Dashboard() {
                       <div className="session-detail-grid">
                         <div><span>ID</span><strong>{selectedLesson.class_id || "—"}</strong></div>
                         <div><span>Level</span><strong>{selectedLesson.student_level || "—"}</strong></div>
-                        <div><span>Teaching Material</span><strong>{selectedLesson.material_title || "—"}</strong></div>
+                        {u.role === "TEACHER" && <div><span>Teaching Material</span><strong>{selectedLesson.material_title || "—"}</strong></div>}
                         <div><span>Start Time</span><strong>{start.toLocaleString("sv-SE").replace("T"," ")}</strong></div>
                         <div><span>End Time</span><strong>{end.toLocaleString("sv-SE").replace("T"," ")}</strong></div>
                         <div><span>{u.role === "TEACHER" ? "Student" : "Teacher"}</span><strong>{u.role === "TEACHER" ? selectedLesson.student_name : selectedLesson.teacher_name}</strong></div>
                         {u.role === "TEACHER" && <div><span>Age</span><strong>{selectedLesson.student_age ?? "—"}</strong></div>}
+                        {u.role === "TEACHER" && selectedLesson.material_id && <div style={{gridColumn:"1 / -1"}}><button type="button" className="primary" onClick={async()=>{const x=await fetch("/api/lesson-materials?lessonId="+encodeURIComponent(selectedLesson.id),{cache:"no-store"});const a=x.ok?await x.json():[];const m=a[0];if(m)setTeacherWorkbook({lessonId:selectedLesson.id,materialId:m.id,title:m.title});}}>📖 View Workbook for Class Preparation</button></div>}
                         {u.role === "TEACHER" && <div style={{gridColumn:"1 / -1"}}><span>Student Note</span><strong style={{display:"block",marginTop:6,whiteSpace:"pre-wrap",lineHeight:1.5}}>{selectedLesson.student_note?.trim() || "No student note has been added."}</strong></div>}
                       </div>
                       <div className="session-enter-area">
@@ -262,6 +269,13 @@ export default function Dashboard() {
                   })()}
                 </div>
               </div>
+              {teacherWorkbook && <div className="gc-modal-backdrop" onContextMenu={(e)=>e.preventDefault()} onClick={()=>setTeacherWorkbook(null)}>
+                <div className="gc-material-modal" onClick={(e)=>e.stopPropagation()}>
+                  <div className="gc-modal-head"><h2>📖 {teacherWorkbook.title}</h2><button type="button" onClick={()=>setTeacherWorkbook(null)}>Close</button></div>
+                  <div className="gc-material-frame"><PdfViewer src={"/api/lesson-materials/file?lessonId="+encodeURIComponent(teacherWorkbook.lessonId)+"&materialId="+encodeURIComponent(teacherWorkbook.materialId)} title={teacherWorkbook.title}/></div>
+                  <p>Teacher preparation view only. This workbook is not available for download.</p>
+                </div>
+              </div>}
             )}
           </div>
         )}
