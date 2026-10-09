@@ -14,6 +14,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Please choose a workbook file." }, { status: 400 });
     }
     if (file.size <= 0) return NextResponse.json({ error: "The selected file is empty." }, { status: 400 });
+    const allowedTypes = ["application/pdf", "image/png", "image/jpeg", "image/webp"];
+    if (file.type && !allowedTypes.includes(file.type)) return NextResponse.json({ error: "Please upload a PDF, PNG, JPG, or WEBP file." }, { status: 415 });
     if (file.size > 50 * 1024 * 1024) {
       return NextResponse.json({ error: "The workbook is larger than 50 MB. Please upload a smaller PDF." }, { status: 413 });
     }
