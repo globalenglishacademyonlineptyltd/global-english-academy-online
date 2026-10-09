@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   const accessKeyId = process.env.S3_ACCESS_KEY_ID;
   const secretAccessKey = process.env.S3_SECRET_ACCESS_KEY;
   if (!endpoint || !bucket || !accessKeyId || !secretAccessKey) return NextResponse.json({ error: "File storage is not configured yet." }, { status: 503 });
-  const client = new S3Client({ region: process.env.S3_REGION || "auto", endpoint, forcePathStyle: false, credentials: { accessKeyId, secretAccessKey } });
+  const client = new S3Client({ region: process.env.S3_REGION || "auto", endpoint, forcePathStyle: true, credentials: { accessKeyId, secretAccessKey } });
   await client.send(new PutBucketCorsCommand({ Bucket: bucket, CORSConfiguration: { CORSRules: [{ AllowedOrigins: ["https://school.globalenglishacademyonline.co.za", "https://globalenglishacademyonline.co.za"], AllowedMethods: ["PUT", "GET", "HEAD"], AllowedHeaders: ["*"], ExposeHeaders: ["ETag"], MaxAgeSeconds: 3600 }] } }));
   const safeName = String(fileName).replace(/[^a-zA-Z0-9._-]/g, "_").slice(-120);
   const key = `materials/${randomUUID()}-${safeName}`;
