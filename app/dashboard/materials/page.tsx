@@ -1,7 +1,188 @@
-"use client";import{useEffect,useState}from"react";import PdfViewer from"@/app/components/PdfViewer";
-const levels=Array.from({length:8},(_,i)=>"Level "+(i+1));const folders=[...levels,"Demo","Ferris Wheel"];
-export default function Materials(){const[rows,setRows]=useState<any[]>([]),[role,setRole]=useState(""),[title,setTitle]=useState(""),[description,setDescription]=useState(""),[url,setUrl]=useState(""),[folder,setFolder]=useState("Level 1"),[sequenceNo,setSequenceNo]=useState("1"),[file,setFile]=useState<File|null>(null),[message,setMessage]=useState(""),[openMaterial,setOpenMaterial]=useState<any>(null);
-async function load(){const me=await fetch("/api/me").then(r=>r.json());const currentRole=me.user?.role||"";setRole(currentRole);if(currentRole!=="ADMIN"){window.location.replace("/dashboard");return}const x=await fetch("/api/materials",{cache:"no-store"});if(x.ok)setRows(await x.json())}useEffect(()=>{load()},[]);
-async function add(){setMessage("Saving…");if(!title.trim()){setMessage("Lesson title is required.");return}let contentData="",mimeType="";if(file){if(file.size>9*1024*1024){setMessage("Please choose a file smaller than 9 MB.");return}contentData=await new Promise<string>((resolve,reject)=>{const fr=new FileReader();fr.onload=()=>resolve(String(fr.result));fr.onerror=reject;fr.readAsDataURL(file)});mimeType=file.type}const x=await fetch("/api/materials",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({title,description,url,folder,level:folder,sequenceNo,contentData,mimeType})});const j=await x.json();if(x.ok){setTitle("");setDescription("");setUrl("");setFolder("Level 1");setSequenceNo(String(Number(sequenceNo)+1));setFile(null);setMessage("Material saved.");load()}else setMessage(j.error||"Could not save material.")}
-const groups=rows.reduce((a,m)=>{const k=m.folder||m.level||"Uncategorised";(a[k]??=[]).push(m);return a},{} as Record<string,any[]>);const ordered=[...levels,"Demo","Ferris Wheel","Uncategorised"].filter(k=>groups[k]);
-if(role&&role!=="ADMIN")return null;return <main className="main"><div className="topbar"><div><h1>Lesson Materials</h1><p className="muted">Organise the curriculum into eight levels, with separate Demo and Ferris Wheel folders.</p></div></div>{role==="ADMIN"&&<div className="card"><div className="card-head"><h3>Add Lesson Material</h3><span className="badge">Admin only</span></div><div className="form-grid"><input className="input" placeholder="Lesson title" value={title} onChange={e=>setTitle(e.target.value)}/><select className="input" value={folder} onChange={e=>setFolder(e.target.value)}>{folders.map(x=><option key={x}>{x}</option>)}</select><input className="input" placeholder="Lesson number / sequence" type="number" min="1" value={sequenceNo} onChange={e=>setSequenceNo(e.target.value)}/><input className="input" placeholder="Short description" value={description} onChange={e=>setDescription(e.target.value)}/></div><label className="input file-input">Upload PDF / lesson file <input type="file" accept=".pdf,.png,.jpg,.jpeg,.webp" onChange={e=>setFile(e.target.files?.[0]||null)}/></label><input className="input" placeholder="Optional external URL" value={url} onChange={e=>setUrl(e.target.value)}/><button className="primary compact-btn" onClick={add}>Save material</button>{message&&<div className="muted small">{message}</div>}</div>}<div className="section">{ordered.map(folder=><div className="material-folder" key={folder}><div className="folder-title">📁 {folder}<span>{groups[folder].length} lessons</span></div><div className="material-list">{groups[folder].sort((a:any,b:any)=>a.sequence_no-b.sequence_no).map((r:any)=><button className="material-row" key={r.id} onClick={()=>setOpenMaterial(r)} disabled={!r.content_data&&!r.url} title={r.content_data||r.url?"Click to view this material":"No file attached"}><div className="sequence">{String(r.sequence_no).padStart(2,"0")}</div><div><strong>{r.title}</strong><div className="muted small">{r.description||"Lesson material"} • {r.content_data?"Uploaded file":r.url?"External material":"No file attached"}</div></div><span className="material-view-action">{r.content_data||r.url?"View":"Unavailable"}</span></button>)}</div></div>)}</div>{openMaterial&&<div className="gc-modal-backdrop" onContextMenu={e=>e.preventDefault()}><div className="gc-material-modal"><div className="gc-modal-head"><h2>📄 {openMaterial.title}</h2><button onClick={()=>setOpenMaterial(null)}>Close</button></div><div className="gc-material-frame"><PdfViewer src={"/api/materials/file?materialId="+encodeURIComponent(openMaterial.id)} title={openMaterial.title}/></div><p>View-only material. The original uploaded workbook remains stored in your platform.</p></div></div>}</main>}
+"use client";
+
+import { useEffect, useState } from "react";
+import PdfViewer from "@/app/components/PdfViewer";
+
+const levels = Array.from({ length: 8 }, (_, i) => "Level " + (i + 1));
+const folders = [...levels, "Demo", "Ferris Wheel"];
+
+export default function Materials() {
+  const [rows, setRows] = useState<any[]>([]);
+  const [role, setRole] = useState("");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [url, setUrl] = useState("");
+  const [folder, setFolder] = useState("Level 1");
+  const [sequenceNo, setSequenceNo] = useState("1");
+  const [file, setFile] = useState<File | null>(null);
+  const [message, setMessage] = useState("");
+  const [openMaterial, setOpenMaterial] = useState<any>(null);
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+
+  async function load() {
+    const me = await fetch("/api/me").then(r => r.json());
+    const currentRole = me.user?.role || "";
+    setRole(currentRole);
+    if (currentRole !== "ADMIN") {
+      window.location.replace("/dashboard");
+      return;
+    }
+    const x = await fetch("/api/materials", { cache: "no-store" });
+    if (x.ok) setRows(await x.json());
+  }
+
+  useEffect(() => { load(); }, []);
+
+  async function add() {
+    setMessage("Saving…");
+    if (!title.trim()) {
+      setMessage("Lesson title is required.");
+      return;
+    }
+    let contentData = "", mimeType = "";
+    if (file) {
+      if (file.size > 9 * 1024 * 1024) {
+        setMessage("Please choose a file smaller than 9 MB.");
+        return;
+      }
+      contentData = await new Promise<string>((resolve, reject) => {
+        const fr = new FileReader();
+        fr.onload = () => resolve(String(fr.result));
+        fr.onerror = reject;
+        fr.readAsDataURL(file);
+      });
+      mimeType = file.type;
+    }
+    const x = await fetch("/api/materials", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ title, description, url, folder, level: folder, sequenceNo, contentData, mimeType })
+    });
+    const j = await x.json();
+    if (x.ok) {
+      setTitle("");
+      setDescription("");
+      setUrl("");
+      setFolder("Level 1");
+      setSequenceNo(String(Number(sequenceNo) + 1));
+      setFile(null);
+      setMessage("Material saved.");
+      setExpandedFolders(previous => new Set(previous).add(folder));
+      await load();
+    } else {
+      setMessage(j.error || "Could not save material.");
+    }
+  }
+
+  function toggleFolder(name: string) {
+    setExpandedFolders(previous => {
+      const next = new Set(previous);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  }
+
+  async function deleteMaterial(material: any) {
+    const confirmed = window.confirm(
+      'Permanently delete "' + material.title + '"? This cannot be undone. The uploaded file and its lesson-material assignments will also be deleted.'
+    );
+    if (!confirmed) return;
+
+    setMessage("Deleting material…");
+    const response = await fetch("/api/materials", {
+      method: "DELETE",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ materialId: material.id })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setMessage(result.error || "Could not delete material.");
+      return;
+    }
+    setRows(previous => previous.filter(item => item.id !== material.id));
+    if (openMaterial?.id === material.id) setOpenMaterial(null);
+    setMessage('"' + material.title + '" was permanently deleted.');
+  }
+
+  const groups = rows.reduce((a, m) => {
+    const k = m.folder || m.level || "Uncategorised";
+    (a[k] ??= []).push(m);
+    return a;
+  }, {} as Record<string, any[]>);
+  const ordered = [...levels, "Demo", "Ferris Wheel", "Uncategorised"].filter(k => groups[k]);
+
+  if (role && role !== "ADMIN") return null;
+
+  return (
+    <main className="main">
+      <div className="topbar">
+        <div>
+          <h1>Lesson Materials</h1>
+          <p className="muted">Organise the curriculum into eight levels, with separate Demo and Ferris Wheel folders.</p>
+        </div>
+      </div>
+
+      {role === "ADMIN" && <div className="card">
+        <div className="card-head"><h3>Add Lesson Material</h3><span className="badge">Admin only</span></div>
+        <div className="form-grid">
+          <input className="input" placeholder="Lesson title" value={title} onChange={e => setTitle(e.target.value)} />
+          <select className="input" value={folder} onChange={e => setFolder(e.target.value)}>{folders.map(x => <option key={x}>{x}</option>)}</select>
+          <input className="input" placeholder="Lesson number / sequence" type="number" min="1" value={sequenceNo} onChange={e => setSequenceNo(e.target.value)} />
+          <input className="input" placeholder="Short description" value={description} onChange={e => setDescription(e.target.value)} />
+        </div>
+        <label className="input file-input">Upload PDF / lesson file <input type="file" accept=".pdf,.png,.jpg,.jpeg,.webp" onChange={e => setFile(e.target.files?.[0] || null)} /></label>
+        <input className="input" placeholder="Optional external URL" value={url} onChange={e => setUrl(e.target.value)} />
+        <button className="primary compact-btn" onClick={add}>Save material</button>
+        {message && <div className="muted small" role="status" style={{ marginTop: 10 }}>{message}</div>}
+      </div>}
+
+      <div className="section">
+        {ordered.map(name => {
+          const isExpanded = expandedFolders.has(name);
+          const folderRows = [...groups[name]].sort((a: any, b: any) => Number(a.sequence_no) - Number(b.sequence_no));
+          return (
+            <section className="material-folder" key={name}>
+              <button
+                type="button"
+                className="folder-title"
+                onClick={() => toggleFolder(name)}
+                aria-expanded={isExpanded}
+                style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", textAlign: "left", border: 0, background: "transparent", padding: "14px 12px" }}
+              >
+                <span aria-hidden="true" style={{ display: "inline-flex", alignItems: "center", fontSize: 13 }}>{isExpanded ? "▼" : "▶"}</span>
+                <span aria-hidden="true">📁</span>
+                <strong style={{ flex: 1 }}>{name}</strong>
+                <span>{folderRows.length} lessons</span>
+              </button>
+              {isExpanded && <div className="material-list">
+                {folderRows.map((r: any) => (
+                  <div className="material-row" key={r.id} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div className="sequence">{String(r.sequence_no).padStart(2, "0")}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <strong>{r.title}</strong>
+                      <div className="muted small">{r.description || "Lesson material"} • {r.content_data ? "Uploaded file" : r.url ? "External material" : "No file attached"}</div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                      <button type="button" className="secondary compact-btn" onClick={() => setOpenMaterial(r)} disabled={!r.content_data && !r.url} title={r.content_data || r.url ? "View this material" : "No file attached"}>View</button>
+                      <button type="button" className="compact-btn" onClick={() => deleteMaterial(r)} aria-label={'Permanently delete ' + r.title} title="Permanently delete this material" style={{ background: "#B91C1C", color: "#fff", border: 0, borderRadius: 8, padding: "8px 12px" }}>Delete</button>
+                    </div>
+                  </div>
+                ))}
+              </div>}
+            </section>
+          );
+        })}
+        {ordered.length === 0 && <div className="card muted">No lesson materials have been uploaded yet.</div>}
+      </div>
+
+      {openMaterial && <div className="gc-modal-backdrop" onContextMenu={e => e.preventDefault()}>
+        <div className="gc-material-modal">
+          <div className="gc-modal-head"><h2>📄 {openMaterial.title}</h2><button onClick={() => setOpenMaterial(null)}>Close</button></div>
+          <div className="gc-material-frame"><PdfViewer src={"/api/materials/file?materialId=" + encodeURIComponent(openMaterial.id)} title={openMaterial.title} /></div>
+          <p>View-only material. The original uploaded workbook remains stored in your platform.</p>
+        </div>
+      </div>}
+    </main>
+  );
+}
