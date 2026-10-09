@@ -65,10 +65,6 @@ export default function Materials() {
     }
     let contentData = "", mimeType = "";
     if (file) {
-      if (file.size > 9 * 1024 * 1024) {
-        setMessage("Please choose a file smaller than 9 MB.");
-        return;
-      }
       contentData = await new Promise<string>((resolve, reject) => {
         const fr = new FileReader();
         fr.onload = () => resolve(String(fr.result));
