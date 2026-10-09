@@ -12,7 +12,6 @@ export async function POST(req: Request) {
   const s = await requireRole(["ADMIN"]);
   const { title, description, url, level, folder, sequenceNo, contentData, mimeType } = await req.json();
   if (!title) return NextResponse.json({ error: "Title required" }, { status: 400 });
-  if (contentData && String(contentData).length > 12 * 1024 * 1024) return NextResponse.json({ error: "Uploaded file is too large. Please keep files under 9 MB." }, { status: 413 });
   const f = folder || level || "Level 1", seq = Number(sequenceNo) || 1;
   const r = await query("INSERT INTO materials(title,description,url,level,folder,sequence_no,content_data,mime_type,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *", [title, description || "", url || "", level || f, f, seq, contentData || "", mimeType || "", s.id]);
   return NextResponse.json(r.rows[0]);
@@ -29,7 +28,6 @@ export async function PATCH(req: Request) {
   const { materialId, title, description, url, level, folder, sequenceNo, contentData, mimeType } = body;
   if (!materialId) return NextResponse.json({ error: "A material ID is required." }, { status: 400 });
   if (!title?.trim()) return NextResponse.json({ error: "Title required" }, { status: 400 });
-  if (contentData && String(contentData).length > 12 * 1024 * 1024) return NextResponse.json({ error: "Uploaded file is too large. Please keep files under 9 MB." }, { status: 413 });
   const existing = await query("SELECT id FROM materials WHERE id=$1", [materialId]);
   if (!existing.rowCount) return NextResponse.json({ error: "Material not found." }, { status: 404 });
   const f = folder || level || "Level 1", seq = Number(sequenceNo) || 1;
