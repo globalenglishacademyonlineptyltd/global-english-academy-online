@@ -68,16 +68,15 @@ export default function Materials() {
       if (file) {
         mimeType = file.type || "application/octet-stream";
         setMessage("Uploading workbook to secure file storage…");
-        const signResponse = await fetch("/api/materials/upload-url", {
+        const uploadForm = new FormData();
+        uploadForm.append("file", file);
+        const uploadResponse = await fetch("/api/materials/upload", {
           method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ fileName: file.name, mimeType })
+          body: uploadForm
         });
-        const signed = await signResponse.json();
-        if (!signResponse.ok) throw new Error(signed.error || "Could not prepare workbook upload.");
-        const uploadResponse = await fetch(signed.uploadUrl, { method: "PUT", headers: { "Content-Type": mimeType }, body: file });
-        if (!uploadResponse.ok) throw new Error("The workbook upload failed. Please try again.");
-        contentData = signed.storageKey;
+        const uploaded = await uploadResponse.json().catch(() => ({}));
+        if (!uploadResponse.ok) throw new Error(uploaded.error || "The workbook upload failed. Please try again.");
+        contentData = uploaded.storageKey;
         setMessage("Workbook uploaded. Saving lesson details…");
       }
       const x = await fetch("/api/materials", {
