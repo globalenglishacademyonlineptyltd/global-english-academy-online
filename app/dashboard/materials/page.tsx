@@ -63,23 +63,30 @@ export default function Materials() {
       setMessage("Lesson title is required.");
       return;
     }
-    let contentData = "", mimeType = "";
-    if (file) {
-      contentData = await new Promise<string>((resolve, reject) => {
-        const fr = new FileReader();
-        fr.onload = () => resolve(String(fr.result));
-        fr.onerror = reject;
-        fr.readAsDataURL(file);
+    try {
+      let contentData = "", mimeType = "";
+      if (file) {
+        mimeType = file.type || "application/octet-stream";
+        setMessage("Uploading workbook to secure file storage…");
+        const signResponse = await fetch("/api/materials/upload-url", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ fileName: file.name, mimeType })
+        });
+        const signed = await signResponse.json();
+        if (!signResponse.ok) throw new Error(signed.error || "Could not prepare workbook upload.");
+        const uploadResponse = await fetch(signed.uploadUrl, { method: "PUT", headers: { "Content-Type": mimeType }, body: file });
+        if (!uploadResponse.ok) throw new Error("The workbook upload failed. Please try again.");
+        contentData = signed.storageKey;
+        setMessage("Workbook uploaded. Saving lesson details…");
+      }
+      const x = await fetch("/api/materials", {
+        method: editingMaterialId ? "PATCH" : "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ materialId: editingMaterialId, title, description, url, folder, level: folder, sequenceNo, contentData, mimeType })
       });
-      mimeType = file.type;
-    }
-    const x = await fetch("/api/materials", {
-      method: editingMaterialId ? "PATCH" : "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ materialId: editingMaterialId, title, description, url, folder, level: folder, sequenceNo, contentData, mimeType })
-    });
-    const j = await x.json();
-    if (x.ok) {
+      const j = await x.json();
+      if (!x.ok) throw new Error(j.error || "Could not save material.");
       setEditingMaterialId(null);
       setTitle("");
       setDescription("");
@@ -90,8 +97,8 @@ export default function Materials() {
       setMessage(editingMaterialId ? "Material updated." : "Material saved.");
       setExpandedFolders(previous => new Set(previous).add(folder));
       await load();
-    } else {
-      setMessage(j.error || "Could not save material.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not save material.");
     }
   }
 
