@@ -17,6 +17,7 @@ export default function Materials() {
   const [file, setFile] = useState<File | null>(null);
   const [message, setMessage] = useState("");
   const [openMaterial, setOpenMaterial] = useState<any>(null);
+  const [editingMaterialId, setEditingMaterialId] = useState<string | null>(null);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
 
   async function load() {
@@ -32,6 +33,29 @@ export default function Materials() {
   }
 
   useEffect(() => { load(); }, []);
+
+  function startEdit(material: any) {
+    setEditingMaterialId(material.id);
+    setTitle(material.title || "");
+    setDescription(material.description || "");
+    setUrl(material.url || "");
+    setFolder(material.folder || material.level || "Level 1");
+    setSequenceNo(String(material.sequence_no || 1));
+    setFile(null);
+    setMessage("Editing material. Upload a new file only if you want to replace the existing workbook.");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function cancelEdit() {
+    setEditingMaterialId(null);
+    setTitle("");
+    setDescription("");
+    setUrl("");
+    setFolder("Level 1");
+    setSequenceNo("1");
+    setFile(null);
+    setMessage("Edit cancelled.");
+  }
 
   async function add() {
     setMessage("Saving…");
@@ -54,19 +78,20 @@ export default function Materials() {
       mimeType = file.type;
     }
     const x = await fetch("/api/materials", {
-      method: "POST",
+      method: editingMaterialId ? "PATCH" : "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ title, description, url, folder, level: folder, sequenceNo, contentData, mimeType })
+      body: JSON.stringify({ materialId: editingMaterialId, title, description, url, folder, level: folder, sequenceNo, contentData, mimeType })
     });
     const j = await x.json();
     if (x.ok) {
+      setEditingMaterialId(null);
       setTitle("");
       setDescription("");
       setUrl("");
       setFolder("Level 1");
       setSequenceNo(String(Number(sequenceNo) + 1));
       setFile(null);
-      setMessage("Material saved.");
+      setMessage(editingMaterialId ? "Material updated." : "Material saved.");
       setExpandedFolders(previous => new Set(previous).add(folder));
       await load();
     } else {
@@ -124,16 +149,17 @@ export default function Materials() {
       </div>
 
       {role === "ADMIN" && <div className="card">
-        <div className="card-head"><h3>Add Lesson Material</h3><span className="badge">Admin only</span></div>
+        <div className="card-head"><h3>{editingMaterialId ? "Edit Lesson Material" : "Add Lesson Material"}</h3><span className="badge">Admin only</span></div>
         <div className="form-grid">
           <input className="input" placeholder="Lesson title" value={title} onChange={e => setTitle(e.target.value)} />
           <select className="input" value={folder} onChange={e => setFolder(e.target.value)}>{folders.map(x => <option key={x}>{x}</option>)}</select>
           <input className="input" placeholder="Lesson number / sequence" type="number" min="1" value={sequenceNo} onChange={e => setSequenceNo(e.target.value)} />
           <input className="input" placeholder="Short description" value={description} onChange={e => setDescription(e.target.value)} />
         </div>
-        <label className="input file-input">Upload PDF / lesson file <input type="file" accept=".pdf,.png,.jpg,.jpeg,.webp" onChange={e => setFile(e.target.files?.[0] || null)} /></label>
+        <label className="input file-input">{editingMaterialId ? "Replace workbook (optional)" : "Upload PDF / lesson file"} <input type="file" accept=".pdf,.png,.jpg,.jpeg,.webp" onChange={e => setFile(e.target.files?.[0] || null)} /></label>
+        {editingMaterialId && <p className="muted small">Leave the file field empty to keep the current uploaded workbook.</p>}
         <input className="input" placeholder="Optional external URL" value={url} onChange={e => setUrl(e.target.value)} />
-        <button className="primary compact-btn" onClick={add}>Save material</button>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><button className="primary compact-btn" onClick={add}>{editingMaterialId ? "Save Changes" : "Save material"}</button>{editingMaterialId && <button type="button" className="secondary compact-btn" onClick={cancelEdit}>Cancel Edit</button>}</div>
         {message && <div className="muted small" role="status" style={{ marginTop: 10 }}>{message}</div>}
       </div>}
 
@@ -164,6 +190,7 @@ export default function Materials() {
                       <div className="muted small">{r.description || "Lesson material"} • {r.content_data ? "Uploaded file" : r.url ? "External material" : "No file attached"}</div>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                      <button type="button" className="secondary compact-btn" onClick={() => startEdit(r)} title="Edit lesson details or replace the workbook">Edit</button>
                       <button type="button" className="secondary compact-btn" onClick={() => setOpenMaterial(r)} disabled={!r.content_data && !r.url} title={r.content_data || r.url ? "View this material" : "No file attached"}>View</button>
                       <button type="button" className="compact-btn" onClick={() => deleteMaterial(r)} aria-label={'Permanently delete ' + r.title} title="Permanently delete this material" style={{ background: "#B91C1C", color: "#fff", border: 0, borderRadius: 8, padding: "8px 12px" }}>Delete</button>
                     </div>
