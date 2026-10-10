@@ -68,27 +68,19 @@ export default function Materials() {
       if (file) {
         mimeType = file.type || "application/octet-stream";
         setMessage("Uploading workbook to secure file storage…");
-        // Ask the authenticated server for a short-lived upload URL, then send the file
-        // directly to object storage so Railway's application proxy does not time out.
-        const signResponse = await fetch("/api/materials/upload-url", {
+        // Keep the upload on the school's own origin. This avoids browser CORS
+        // failures when Railway's private bucket is not browser-accessible.
+        const form = new FormData();
+        form.append("file", file);
+        const uploadResponse = await fetch("/api/materials/upload", {
           method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ fileName: file.name, mimeType: mimeType })
+          body: form
         });
-        const signed = await signResponse.json().catch(() => ({}));
-        if (!signResponse.ok || !signed.uploadUrl || !signed.storageKey) {
-          throw new Error(signed.error || "Could not prepare secure workbook storage.");
+        const uploaded = await uploadResponse.json().catch(() => ({}));
+        if (!uploadResponse.ok || !uploaded.storageKey) {
+          throw new Error(uploaded.error || "The workbook could not be uploaded. Please try again.");
         }
-        setMessage("Uploading workbook directly to secure storage…");
-        const storageResponse = await fetch(signed.uploadUrl, {
-          method: "PUT",
-          headers: { "Content-Type": mimeType },
-          body: file
-        });
-        if (!storageResponse.ok) {
-          throw new Error("Secure storage rejected the upload (HTTP " + storageResponse.status + "). Please try again.");
-        }
-        contentData = signed.storageKey;
+        contentData = uploaded.storageKey;
         setMessage("Workbook uploaded. Saving lesson details…");
       }
       const x = await fetch("/api/materials", {
