@@ -58,26 +58,37 @@ export default function Dashboard() {
       .then(setBranding)
       .catch(() => {});
 
-    fetch("/api/me")
+    fetch("/api/me", { cache: "no-store" })
       .then((x) => x.json())
       .then((j) => {
-        if (!j.user) location.href = "/login";
-        else setU(j.user);
-      });
-
-    const lessonParams = new URLSearchParams({ startDate: today, endDate: today });
-    fetch("/api/lessons?" + lessonParams.toString(), { cache: "no-store" })
-      .then((x) => (x.ok ? x.json() : []))
-      .then(setLessons);
-    fetch("/api/materials", { cache: "no-store" })
-      .then((x) => (x.ok ? x.json() : []))
-      .then(setMaterials);
-    fetch("/api/students", { cache: "no-store" })
-      .then((x) => (x.ok ? x.json() : []))
-      .then(setStudents);
-    fetch("/api/teachers", { cache: "no-store" })
-      .then((x) => (x.ok ? x.json() : []))
-      .then(setTeachers);
+        if (!j.user) {
+          location.href = "/login";
+          return;
+        }
+        setU(j.user);
+        // These endpoints are administrator-only. Do not call them for teachers,
+        // students, or before the authenticated role has been resolved.
+        if (j.user.role === "ADMIN") {
+          fetch("/api/materials", { cache: "no-store" })
+            .then((x) => (x.ok ? x.json() : []))
+            .then(setMaterials)
+            .catch(() => setMaterials([]));
+          fetch("/api/students", { cache: "no-store" })
+            .then((x) => (x.ok ? x.json() : []))
+            .then(setStudents)
+            .catch(() => setStudents([]));
+          fetch("/api/teachers", { cache: "no-store" })
+            .then((x) => (x.ok ? x.json() : []))
+            .then(setTeachers)
+            .catch(() => setTeachers([]));
+        }
+        const lessonParams = new URLSearchParams({ startDate: today, endDate: today });
+        fetch("/api/lessons?" + lessonParams.toString(), { cache: "no-store" })
+          .then((x) => (x.ok ? x.json() : []))
+          .then(setLessons)
+          .catch(() => setLessons([]));
+      })
+      .catch(() => { location.href = "/login"; });
   }, []);
 
   useEffect(() => {
