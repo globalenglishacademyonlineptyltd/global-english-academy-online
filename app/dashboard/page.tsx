@@ -23,6 +23,9 @@ export default function Dashboard() {
   const [branding, setBranding] = useState<any>(null);
   const [serverTime, setServerTime] = useState(new Date());
   const [selectedLesson, setSelectedLesson] = useState<any>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelMessage, setCancelMessage] = useState("");
+  const [cancelSubmitting, setCancelSubmitting] = useState(false);
   const [teacherNotePrompt, setTeacherNotePrompt] = useState(false);
   const [teacherNoteRead, setTeacherNoteRead] = useState(false);
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Johannesburg" });
@@ -129,6 +132,20 @@ export default function Dashboard() {
     };
   }, [u?.role]);
 
+  async function requestLessonCancellation() {
+    if (!selectedLesson || !cancelReason.trim()) { setCancelMessage("Please enter a reason for the cancellation request."); return; }
+    setCancelSubmitting(true); setCancelMessage("");
+    try {
+      const response = await fetch("/api/cancellation-requests", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ lessonId: selectedLesson.id, reason: cancelReason.trim() }) });
+      const result = await response.json();
+      if (!response.ok) { setCancelMessage(result.error || "Could not submit the cancellation request."); return; }
+      setCancelMessage("Cancellation request sent to Admin for approval.");
+      setCancelReason("");
+      await loadCancellationRequests();
+    } catch { setCancelMessage("Could not submit the cancellation request. Please try again."); }
+    finally { setCancelSubmitting(false); }
+  }
+
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
     location.href = "/login";
@@ -217,7 +234,7 @@ export default function Dashboard() {
               <span><i className="session-dot canceled" style={{background:"#ef4444",border:"1px solid #b91c1c"}}></i>Canceled slots</span>
             </div>}
             <div className="session-list">
-              {lessons.filter(l=>{const nowKey=serverTime.toLocaleDateString("en-CA",{timeZone:"Africa/Johannesburg"});return l.status!=="CANCELLED"&&new Date(l.starts_at).toLocaleDateString("en-CA",{timeZone:"Africa/Johannesburg"})===nowKey;}).map((l)=>{
+              {lessons.filter(l=>{const nowKey=serverTime.toLocaleDateString("en-CA",{timeZone:"Africa/Johannesburg"});const dateKey=new Date(l.starts_at).toLocaleDateString("en-CA",{timeZone:"Africa/Johannesburg"});const maxKey=new Date(serverTime.getTime()+14*24*60*60*1000).toLocaleDateString("en-CA",{timeZone:"Africa/Johannesburg"});return l.status!=="CANCELLED"&&dateKey>=nowKey&&dateKey<=maxKey;}).map((l)=>{
                 const d=new Date(l.starts_at);
                 const sessionStyle = l.status==="NO_SHOW" || l.status==="MISSED_BY_TEACHER_AND_STUDENT" && u.role==="STUDENT" ? {background:"#ff1f1f",color:"#111827",borderColor:"#dc2626"} : l.status==="MISSED_BY_TEACHER" || l.status==="MISSED_BY_TEACHER_AND_STUDENT" && u.role==="TEACHER" ? {background:"#d1d5db",color:"#111827",borderColor:"#6b7280"} : undefined; return <button type="button" className={`session-row ${u.role === "STUDENT" ? "session-student" : "session-teacher"}`} style={sessionStyle} key={l.id} onClick={() => { setSelectedLesson(l); setTeacherNotePrompt(false); setTeacherNoteRead(false); }}>
                   <span>{d.toLocaleDateString("sv-SE")} {d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</span>
@@ -226,7 +243,7 @@ export default function Dashboard() {
                   </span>
                 </button>;
               })}
-              {lessons.filter(l=>{const nowKey=serverTime.toLocaleDateString("en-CA",{timeZone:"Africa/Johannesburg"});return l.status!=="CANCELLED"&&new Date(l.starts_at).toLocaleDateString("en-CA",{timeZone:"Africa/Johannesburg"})===nowKey;}).length===0 && <div className="session-empty">No scheduled sessions today.</div>}
+              {lessons.filter(l=>{const nowKey=serverTime.toLocaleDateString("en-CA",{timeZone:"Africa/Johannesburg"});const dateKey=new Date(l.starts_at).toLocaleDateString("en-CA",{timeZone:"Africa/Johannesburg"});const maxKey=new Date(serverTime.getTime()+14*24*60*60*1000).toLocaleDateString("en-CA",{timeZone:"Africa/Johannesburg"});return l.status!=="CANCELLED"&&dateKey>=nowKey&&dateKey<=maxKey;}).length===0 && <div className="session-empty">No scheduled sessions today.</div>}
             </div>
             {selectedLesson && (
               <div className="session-detail-overlay" onClick={() => setSelectedLesson(null)}>
@@ -249,6 +266,15 @@ export default function Dashboard() {
                         {u.role === "TEACHER" && <div><span>Age</span><strong>{selectedLesson.student_age ?? "—"}</strong></div>}
                         {u.role === "TEACHER" && <div style={{gridColumn:"1 / -1"}}><span>Student Note</span><strong style={{display:"block",marginTop:6,whiteSpace:"pre-wrap",lineHeight:1.5}}>{selectedLesson.student_note?.trim() || "No student note has been added."}</strong></div>}
                       </div>
+                      {u.role === "TEACHER" && new Date(selectedLesson.starts_at).getTime() > serverTime.getTime() && !["CANCELLED","COMPLETED"].includes(selectedLesson.status) && (
+                        <div className="card" style={{marginTop:16}}>
+                          <h3 style={{marginTop:0}}>Request Lesson Cancellation</h3>
+                          <p className="muted small">Your lesson remains booked until Admin approves the cancellation.</p>
+                          <label>Reason for cancellation<textarea className="input" rows={3} value={cancelReason} onChange={e=>setCancelReason(e.target.value)} placeholder="Please explain why you need to cancel this lesson." /></label>
+                          <button type="button" className="primary" disabled={cancelSubmitting || !cancelReason.trim() || cancellations.some(r=>r.lesson_id===selectedLesson.id&&r.status==="PENDING")} onClick={requestLessonCancellation}>{cancelSubmitting?"Sending…":cancellations.some(r=>r.lesson_id===selectedLesson.id&&r.status==="PENDING")?"Cancellation Pending Approval":"Request Cancellation"}</button>
+                          {cancelMessage && <p className="muted" role="status">{cancelMessage}</p>}
+                        </div>
+                      )}
                       <div className="session-enter-area">
                         {canEnter ? (u.role==="TEACHER" ? <button type="button" className="session-enter-button" onClick={()=>{setTeacherNoteRead(false);setTeacherNotePrompt(true)}}>Enter classroom</button> : <a className="session-enter-button" href={"/classroom/"+selectedLesson.room_code}>Enter classroom</a>) : <div className="session-enter-wait">Enter classroom will appear exactly 10 minutes before the class starts.</div>}<>{teacherNotePrompt && u.role==="TEACHER" && canEnter && <div onClick={()=>setTeacherNotePrompt(false)} style={{position:"fixed",inset:0,zIndex:2000,background:"rgba(15,23,42,.65)",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}><div onClick={e=>e.stopPropagation()} style={{width:"min(760px,100%)",background:"#fff",borderRadius:14,boxShadow:"0 20px 60px rgba(0,0,0,.35)",padding:24}}><h2 style={{marginTop:0}}>Student Note — Please Read Before Class</h2><div style={{border:"1px solid #d1d5db",borderRadius:10,padding:16,background:"#fafafa",whiteSpace:"pre-wrap",lineHeight:1.6,minHeight:90}}>{selectedLesson.student_note?.trim() || "No student note has been added for this student. Please still confirm that you have checked the student information before entering the classroom."}</div><label style={{display:"flex",gap:10,alignItems:"flex-start",marginTop:18,fontWeight:600}}><input type="checkbox" checked={teacherNoteRead} onChange={e=>setTeacherNoteRead(e.target.checked)} style={{marginTop:4}}/>I have read the student note and student information and will follow the instructions during this lesson.</label><div style={{display:"flex",justifyContent:"flex-end",gap:10,marginTop:20}}><button type="button" className="secondary" onClick={()=>setTeacherNotePrompt(false)}>Cancel</button><button type="button" className="primary" disabled={!teacherNoteRead} onClick={()=>{window.location.href="/classroom/"+selectedLesson.room_code}}>I Have Read the Note — Enter Classroom</button></div></div></div>}</>{u.role==="TEACHER"&&serverTime.getTime()>=end.getTime()&&<a className="primary" style={{display:"inline-block",marginTop:10,textDecoration:"none"}} href={"/dashboard/records?lessonId="+encodeURIComponent(selectedLesson.id)}>Complete Report</a>}{u.role==="STUDENT"&&serverTime.getTime()>=end.getTime()&&(
   selectedLesson.status==="MISSED_BY_TEACHER" || selectedLesson.status==="MISSED_BY_TEACHER_AND_STUDENT"
