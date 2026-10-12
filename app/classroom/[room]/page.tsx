@@ -48,6 +48,7 @@ export default function Classroom(){
    if(x.type==="hello"){if(teacher)sendOffer();return;}
    if(x.type==="state"&&student){setInteractive(!!x.interactive);setGame(x.game||null);setScore(Number(x.score)||0);setReward(x.reward||"");if(x.positions)setPositions(x.positions);return;}
    if(x.type==="chat"){setChat(v=>v.concat([{name:x.name||"Classroom",text:x.text||""}]).slice(-80));return;}
+   if(x.type==="student_ready"&&teacher){setStatus("Student is ready to participate");return;}
    const p=createPeer();
    try{
      if(x.type==="offer"&&(student||me?.role==="ADMIN")){await p.setRemoteDescription(x.description);const a=await p.createAnswer();await p.setLocalDescription(a);await signal({type:"answer",description:p.localDescription});}
@@ -87,11 +88,20 @@ export default function Classroom(){
        localStream.current=stream;if(localVideo.current)localVideo.current.srcObject=stream;
        createPeer();setStatus("Connected — classroom ready");signal({type:"hello"});setLoading(false);
        setTimeout(()=>startRecording(),400);
-     }catch{setStatus("Camera and microphone permission required");setLoading(false);}
+     }catch(e){console.error("Classroom media startup failed",e);setStatus("Camera/microphone unavailable — check browser permissions and device access");setLoading(false);}
    }
    start();poll();poller.current=setInterval(poll,700);
    return()=>{alive=false;if(poller.current)clearInterval(poller.current);recorder.current?.stop();localStream.current?.getTracks().forEach(t=>t.stop());peer.current?.close();peer.current=null;};
  },[room,router]);
+
+ // Video elements are rendered only after loading completes, so attach streams after their refs exist.
+ useEffect(()=>{
+   if(loading||!me)return;
+   const attachVideo=(el:HTMLVideoElement|null,stream:MediaStream|null)=>{if(!el||!stream)return;if(el.srcObject!==stream)el.srcObject=stream;void el.play().catch(()=>{});};
+   attachVideo(localVideo.current,localStream.current);
+   attachVideo(remoteVideo.current,remoteStream.current);
+ },[loading,me,connected,lesson]);
+
 
 
  useEffect(()=>{if(!lesson||!me||me.role==="ADMIN")return;const beat=()=>signal({type:"presence"});beat();const id=setInterval(beat,15000);return()=>clearInterval(id)},[lesson,me]);
@@ -143,8 +153,8 @@ export default function Classroom(){
    <div className="gc-actions">
     {me?.role!=="ADMIN"&&<button className={muted?"active":""} onClick={()=>{const n=!muted;localStream.current?.getAudioTracks().forEach(t=>t.enabled=!n);setMuted(n);}}>🎙 {muted?"Unmute":"Mute"}</button>}
     {me?.role!=="ADMIN"&&<button className={!camera?"active":""} onClick={()=>{const n=!camera;localStream.current?.getVideoTracks().forEach(t=>t.enabled=n);setCamera(n);}}>📷 Camera</button>}
-    {me?.role!=="ADMIN"&&<button className={recording?"active":""} onClick={recording?stopRecording:startRecording}>⏺ {recording?"Stop "+time:"Record"}</button>}
-    <button disabled={!teacher} onClick={()=>setShowGames(true)}>🎮 Games</button><button disabled={!teacher} onClick={()=>setShowLayout(true)}>🎭 Role Play</button>{me?.role!=="ADMIN"&&<button className="danger" onClick={endClass}>{ending?"Waiting…":"End Class"}</button>}
+    {teacher&&<button className={recording?"active":""} onClick={recording?stopRecording:startRecording}>⏺ {recording?"Stop "+time:"Record"}</button>}
+    <button disabled={!teacher} onClick={()=>setShowGames(true)}>🎮 Games</button>{teacher&&<button onClick={()=>setShowLayout(true)}>🎭 Role Play</button>}{me?.role!=="ADMIN"&&<button className="danger" onClick={endClass}>{ending?"Waiting…":"End Class"}</button>}
    </div>
   </header>
 
@@ -156,14 +166,14 @@ export default function Classroom(){
      <div className="gc-video" style={{left:positions.teacher.x+"%",top:(positions.teacher.y+5)+"%",width:positions.teacher.w+"%"}} onPointerDown={e=>moveVideo("teacher",e)}><video ref={teacher?localVideo:remoteVideo} autoPlay playsInline muted={teacher}/><div className="gc-video-label">👩‍🏫 {lesson.teacher_name}</div></div>
      <div className="gc-video" style={{left:positions.student.x+"%",top:(positions.student.y+5)+"%",width:positions.student.w+"%"}} onPointerDown={e=>moveVideo("student",e)}><video ref={teacher?remoteVideo:localVideo} autoPlay playsInline muted={student}/><div className="gc-video-label">🧒 {lesson.student_name}</div></div>
      {game&&interactive&&<div className="gc-game-overlay"><div className="gc-game-card"><h2>{game.title}</h2><p>{game.prompt}</p><div className="gc-game-grid">{game.id==="sort"?<><div className="gc-dragzone">{game.items.map((x:string)=><button className="gc-game-item" draggable={student} key={x} onDragStart={()=>setSortDrag(x)} onClick={()=>setSortDrag(x)}>{x}</button>)}</div><div className="gc-sort-targets"><div className="gc-sort-target" onDragOver={e=>e.preventDefault()} onDrop={()=>{if(sortDrag){answer(sortDrag+"|Land");setSortDrag("");}}}>LAND</div><div className="gc-sort-target" onDragOver={e=>e.preventDefault()} onDrop={()=>{if(sortDrag){answer(sortDrag+"|Water");setSortDrag("");}}}>WATER</div></div></>:game.id==="order"?<div className="gc-game-grid">{game.items.map((x:string)=><button className="gc-game-item" key={x} disabled={!student||orderPick.includes(x)} onClick={()=>answer(x)}>{x}</button>)}</div>:<div className="gc-game-grid">{game.items.map((x:string)=><button className="gc-game-item" key={x} disabled={!student} onClick={()=>answer(x)}>{x}</button>)}</div>}</div>{reward&&<div className="gc-reward">{reward} {score?"Score: "+score:""}</div>}{teacher&&<button className="gc-close-activity" onClick={()=>{setInteractive(false);setGame(null);setReward("");broadcast({interactive:false,game:null,reward:""});}}>Close Activity</button>}</div></div>}
-     <div className="gc-stage-hint">Drag teacher/student cameras to reposition them during role-play.</div>
+     {teacher&&<div className="gc-stage-hint">Drag teacher/student cameras to reposition them during role-play.</div>}
     </div>
-    <div className="gc-tools"><button disabled={!teacher} onClick={()=>setShowGames(true)}>🎮 Games</button><button className={interactive?"active":""} disabled={!teacher} onClick={()=>{const n=!interactive;setInteractive(n);setReward("");broadcast({interactive:n});}}>🎯 {interactive?"Student Controls ON":"Student Controls OFF"}</button><button disabled={!teacher} onClick={()=>setShowLayout(true)}>🎭 Move Cameras</button><span className="tool-spacer"></span><button>‹</button><span className="page-count">Page 1</span><button>›</button></div>
+    <div className="gc-tools">{teacher?<><button onClick={()=>setShowGames(true)}>🎮 Games</button><button className={interactive?"active":""} onClick={()=>{const n=!interactive;setInteractive(n);setReward("");broadcast({interactive:n});}}>🎯 {interactive?"Student Controls ON":"Student Controls OFF"}</button><button onClick={()=>setShowLayout(true)}>🎭 Move Cameras</button><span className="tool-spacer"></span><button>‹</button><span className="page-count">Page 1</span><button>›</button></>:student?<><strong>Student Tools</strong><span>{interactive&&game?"Activity ready — click or drag the answers on screen.":"Your teacher will open activities here."}</span><span className="tool-spacer"></span><button type="button" onClick={()=>{signal({type:"student_ready"});setStatus("You let your teacher know you are ready");}}>🙋 I’m Ready</button></>:<span>Admin monitoring mode</span>}</div>
    </section>
 
    <aside className="gc-right">
     <div className="gc-right-head"><strong>Classroom Controls</strong><span>51Talk-inspired 1-to-1 interactive teaching</span></div>
-    <div className="gc-panel"><h3>Student Interaction</h3><div className="gc-control-row"><button className={interactive?"active":""} disabled={!teacher} onClick={()=>{const n=!interactive;setInteractive(n);setReward("");broadcast({interactive:n});}}>{interactive?"🟢 Student Controls ON":"⚪ Student Controls OFF"}</button><button onClick={()=>setShowGames(true)}>🎮 Games</button></div></div>
+    {teacher?<div className="gc-panel"><h3>Student Interaction</h3><div className="gc-control-row"><button className={interactive?"active":""} onClick={()=>{const n=!interactive;setInteractive(n);setReward("");broadcast({interactive:n});}}>{interactive?"🟢 Student Controls ON":"⚪ Student Controls OFF"}</button><button onClick={()=>setShowGames(true)}>🎮 Games</button></div></div>:student?<div className="gc-panel"><h3>Student Tools</h3><p>{interactive&&game?"Your activity is ready. Select an answer or drag an item on the lesson screen.":"Your teacher will start an interactive activity when it is time to play."}</p><button type="button" onClick={()=>{signal({type:"student_ready"});setStatus("You let your teacher know you are ready");}}>🙋 I’m Ready</button></div>:null}
     <div className="gc-panel"><h3>Lesson</h3><strong>{lesson.topic||"English Lesson"}</strong><p>{lesson.student_name} • {lesson.student_level||"English"}{lesson.student_age?" • Age "+lesson.student_age:""}</p></div>
     {teacher&&<div className="gc-panel"><h3>Student Rewards</h3><div className="gc-control-row">{Object.entries(ICONS).map(([type,icon]:any)=><button key={type} disabled={rewards.length>=15} onClick={()=>giveReward(type)} style={{fontSize:18}}>{icon}</button>)}</div><p>{rewards.length}/15 rewards</p></div>}
     <div className="gc-chat-disabled"><strong>School-controlled classroom</strong><span>Teacher and student contact details and direct messaging are disabled. Communication is limited to the live lesson.</span></div>
