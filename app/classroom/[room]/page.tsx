@@ -115,7 +115,7 @@ export default function Classroom(){
 
  const stopRecording=()=>{if(recorder.current)recorder.current.stop();recorder.current=null;recordStarted.current=0;setRecording(false);};
 
- const endClass=async()=>{if(me?.role==="ADMIN")return;if(ending)return;setEnding(true);if(recording)stopRecording();try{await fetch("/api/classroom-complete",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:lesson?.id})});}catch{}router.replace("/dashboard");};
+ const endClass=async()=>{if(me?.role==="ADMIN"||!lesson)return;if(ending)return;setEnding(true);if(recording)stopRecording();try{await fetch("/api/classroom-complete",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:lesson.id})});const exit=await fetch("/api/classroom-exit",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:lesson.id})});if(!exit.ok)throw new Error("Could not register classroom exit.");let state=await exit.json();while(!state.bothExited){await new Promise(resolve=>setTimeout(resolve,1500));const check=await fetch("/api/classroom-exit?lessonId="+encodeURIComponent(lesson.id),{cache:"no-store"});if(!check.ok)throw new Error("Could not check classroom exit status.");state=await check.json();}window.location.replace("https://globalenglishacademyonline.co.za/");}catch{setEnding(false);setError("We could not confirm both participants have exited. Please try End Class again.");}};
 
  const startGame=(g:any)=>{if(!teacher)return;setGame(g);setInteractive(true);setScore(0);setReward("");setSortDrag("");setOrderPick([]);setShowGames(false);broadcast({game:g,interactive:true,score:0,reward:""});};
  const answer=(item:string)=>{if(!student||!interactive||!game)return;let ok=false;if(game.id==="pick")ok=item===game.answer;if(game.id==="sort"){const parts=item.split("|");const land=parts[0].includes("Dog")||parts[0].includes("Cat");const water=parts[0].includes("Fish")||parts[0].includes("Shark");ok=(land&&parts[1]==="Land")||(water&&parts[1]==="Water");}if(game.id==="order"){const nextOrder=orderPick.concat([item]);setOrderPick(nextOrder);ok=nextOrder.join("|")===game.items.join("|");if(!ok&&nextOrder.length>=game.items.length){setOrderPick([]);setReward("Try the order again!");return;}}const next=ok?score+1:score;setScore(next);setReward(ok?"⭐ Great job!":"Try again!");signal({type:"state",interactive,game,score:next,reward:ok?"⭐ Great job!":"Try again!",positions});};
@@ -139,12 +139,12 @@ export default function Classroom(){
  return <main className="gea-classroom">
   <header className="gc-top">
    <div className="gc-brand">{branding?.logo_data?<img src={branding.logo_data} alt={branding.school_name}/>:<span className="gc-brand-icon">🎓</span>}<div><strong>{branding?.school_name||"Global English Academy"}</strong><small>{lesson.class_id||"Live Classroom"} • {lesson.student_name}</small></div></div>
-   <div className="gc-status"><span className={connected?"gc-dot live":"gc-dot"}></span>{connected?"Connected":status}</div>
+   <div className="gc-status"><span className={connected?"gc-dot live":"gc-dot"}></span>{ending?"Waiting for the other participant to close the classroom…":connected?"Connected":status}</div>
    <div className="gc-actions">
     {me?.role!=="ADMIN"&&<button className={muted?"active":""} onClick={()=>{const n=!muted;localStream.current?.getAudioTracks().forEach(t=>t.enabled=!n);setMuted(n);}}>🎙 {muted?"Unmute":"Mute"}</button>}
     {me?.role!=="ADMIN"&&<button className={!camera?"active":""} onClick={()=>{const n=!camera;localStream.current?.getVideoTracks().forEach(t=>t.enabled=n);setCamera(n);}}>📷 Camera</button>}
     {me?.role!=="ADMIN"&&<button className={recording?"active":""} onClick={recording?stopRecording:startRecording}>⏺ {recording?"Stop "+time:"Record"}</button>}
-    <button disabled={!teacher} onClick={()=>setShowGames(true)}>🎮 Games</button><button disabled={!teacher} onClick={()=>setShowLayout(true)}>🎭 Role Play</button>{me?.role!=="ADMIN"&&<button className="danger" onClick={endClass}>{ending?"Ending…":"End Class"}</button>}
+    <button disabled={!teacher} onClick={()=>setShowGames(true)}>🎮 Games</button><button disabled={!teacher} onClick={()=>setShowLayout(true)}>🎭 Role Play</button>{me?.role!=="ADMIN"&&<button className="danger" onClick={endClass}>{ending?"Waiting…":"End Class"}</button>}
    </div>
   </header>
 
