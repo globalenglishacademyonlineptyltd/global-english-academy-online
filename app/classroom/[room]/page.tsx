@@ -4,6 +4,7 @@ import {useEffect,useRef,useState} from "react";
 import {useParams,useRouter} from "next/navigation";
 import PdfViewer from "@/app/components/PdfViewer";
 
+const clamp=(n:number,min:number,max:number)=>Math.min(max,Math.max(min,n));
 const GAMES=[
  {id:"pick",title:"Picture Pick",prompt:"Click the correct animal.",items:["🐶 Dog","🐱 Cat","🐟 Fish","🦁 Lion"],answer:"🐶 Dog"},
  {id:"sort",title:"Sort It",prompt:"Sort the animals into the correct group.",items:["🐶 Dog","🐱 Cat","🐟 Fish","🦈 Shark"],answer:"Land / Water"},
@@ -20,6 +21,7 @@ export default function Classroom(){
  const [materials,setMaterials]=useState<any[]>([]),[rewards,setRewards]=useState<any[]>([]);
  const [interactive,setInteractive]=useState(false),[game,setGame]=useState<any>(null),[score,setScore]=useState(0),[reward,setReward]=useState(""),[sortDrag,setSortDrag]=useState(""),[orderPick,setOrderPick]=useState<string[]>([]);
  const [connected,setConnected]=useState(false),[muted,setMuted]=useState(false),[camera,setCamera]=useState(true),[recording,setRecording]=useState(false),[recordTime,setRecordTime]=useState(0);
+ const [chat,setChat]=useState<any[]>([]),[chatText,setChatText]=useState("");
  const [showGames,setShowGames]=useState(false),[showLayout,setShowLayout]=useState(false),[openMaterial,setOpenMaterial]=useState<any>(null),[positions,setPositions]=useState<any>({teacher:{x:76,y:0,w:22},student:{x:76,y:26,w:22}});
  const [loading,setLoading]=useState(true),[error,setError]=useState(""),[status,setStatus]=useState("Starting classroom…"),[ending,setEnding]=useState(false);
 
@@ -203,7 +205,7 @@ export default function Classroom(){
     {me?.role!=="ADMIN"&&<button className={muted?"active":""} onClick={()=>{const n=!muted;localStream.current?.getAudioTracks().forEach(t=>t.enabled=!n);setMuted(n);}}>🎙 {muted?"Unmute":"Mute"}</button>}
     {me?.role!=="ADMIN"&&<button className={!camera?"active":""} onClick={()=>{const n=!camera;localStream.current?.getVideoTracks().forEach(t=>t.enabled=n);setCamera(n);}}>📷 Camera</button>}
     {teacher&&<button className={recording?"active":""} onClick={recording?stopRecording:startRecording}>⏺ {recording?"Stop "+time:isBrightLesson?"Start Full Recording":"Record"}</button>}
-    <button disabled={!teacher} onClick={()=>setShowGames(true)}>🎮 Games</button>{teacher&&<button onClick={()=>setShowLayout(true)}>🎭 Role Play</button>}{me?.role!=="ADMIN"&&<button className="danger" onClick={endClass}>{ending?"Waiting…":"End Class"}</button>}
+    {!isBrightLesson&&<button disabled={!teacher} onClick={()=>setShowGames(true)}>🎮 Games</button>}{!isBrightLesson&&teacher&&<button onClick={()=>setShowLayout(true)}>🎭 Role Play</button>}{me?.role!=="ADMIN"&&<button className="danger" onClick={endClass}>{ending?"Waiting…":"End Class"}</button>}
    </div>
   </header>
 
