@@ -13,6 +13,7 @@ export default function Materials() {
   const [description, setDescription] = useState("");
   const [url, setUrl] = useState("");
   const [folder, setFolder] = useState("Level 1");
+  const [unit, setUnit] = useState("");
   const [sequenceNo, setSequenceNo] = useState("1");
   const [file, setFile] = useState<File | null>(null);
   const [message, setMessage] = useState("");
@@ -40,6 +41,7 @@ export default function Materials() {
     setDescription(material.description || "");
     setUrl(material.url || "");
     setFolder(material.folder || material.level || "Level 1");
+    setUnit(material.unit || "");
     setSequenceNo(String(material.sequence_no || 1));
     setFile(null);
     setMessage("Editing material. Upload a new file only if you want to replace the existing workbook.");
@@ -52,6 +54,7 @@ export default function Materials() {
     setDescription("");
     setUrl("");
     setFolder("Level 1");
+    setUnit("");
     setSequenceNo("1");
     setFile(null);
     setMessage("Edit cancelled.");
@@ -86,7 +89,7 @@ export default function Materials() {
       const x = await fetch("/api/materials", {
         method: editingMaterialId ? "PATCH" : "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ materialId: editingMaterialId, title, description, url, folder, level: folder, sequenceNo, contentData, mimeType })
+        body: JSON.stringify({ materialId: editingMaterialId, title, description, url, folder, unit, level: folder, sequenceNo, contentData, mimeType })
       });
       const j = await x.json();
       if (!x.ok) throw new Error(j.error || "Could not save material.");
@@ -150,7 +153,7 @@ export default function Materials() {
       <div className="topbar">
         <div>
           <h1>Lesson Materials</h1>
-          <p className="muted">Organise the curriculum into eight levels, with separate Demo and Ferris Wheel folders.</p>
+          <p className="muted">Add original English Bright ESL lesson URLs by level and sequence. The original interactive lesson remains hosted on English Bright.</p>
         </div>
       </div>
 
@@ -159,12 +162,14 @@ export default function Materials() {
         <div className="form-grid">
           <input className="input" placeholder="Lesson title" value={title} onChange={e => setTitle(e.target.value)} />
           <select className="input" value={folder} onChange={e => setFolder(e.target.value)}>{folders.map(x => <option key={x}>{x}</option>)}</select>
+          <input className="input" placeholder="Unit name (e.g. Unit 1) — optional" value={unit} onChange={e => setUnit(e.target.value)} />
           <input className="input" placeholder="Lesson number / sequence" type="number" min="1" value={sequenceNo} onChange={e => setSequenceNo(e.target.value)} />
           <input className="input" placeholder="Short description" value={description} onChange={e => setDescription(e.target.value)} />
         </div>
-        <label className="input file-input">{editingMaterialId ? "Replace workbook (optional)" : "Upload PDF / lesson file"} <input type="file" accept=".pdf,.png,.jpg,.jpeg,.webp" onChange={e => setFile(e.target.files?.[0] || null)} /></label>
+        <label className="input file-input">{editingMaterialId ? "PDF upload (optional — leave empty to keep current PDF)" : "PDF upload (optional — lesson link only is allowed)"} <input type="file" accept=".pdf,.png,.jpg,.jpeg,.webp" onChange={e => setFile(e.target.files?.[0] || null)} /></label>
         {editingMaterialId && <p className="muted small">Leave the file field empty to keep the current uploaded workbook.</p>}
-        <input className="input" placeholder="Optional external URL" value={url} onChange={e => setUrl(e.target.value)} />
+        <input className="input" placeholder="English Bright lesson URL (optional if uploading a PDF)" value={url} onChange={e => setUrl(e.target.value)} />
+        <p className="muted small">Choose either a lesson link, a PDF, or both. The PDF is optional. Save at least one of them for each lesson. Add the lesson once here; assign it to students from their profiles.</p>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><button className="primary compact-btn" onClick={add}>{editingMaterialId ? "Save Changes" : "Save material"}</button>{editingMaterialId && <button type="button" className="secondary compact-btn" onClick={cancelEdit}>Cancel Edit</button>}</div>
         {message && <div className="muted small" role="status" style={{ marginTop: 10 }}>{message}</div>}
       </div>}

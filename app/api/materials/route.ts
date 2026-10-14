@@ -10,32 +10,39 @@ export async function GET() {
 
 export async function POST(req: Request) {
   const s = await requireRole(["ADMIN"]);
-  const { title, description, url, level, folder, sequenceNo, contentData, mimeType } = await req.json();
-  if (!title) return NextResponse.json({ error: "Title required" }, { status: 400 });
-  const f = folder || level || "Level 1", seq = Number(sequenceNo) || 1;
-  const r = await query("INSERT INTO materials(title,description,url,level,folder,sequence_no,content_data,mime_type,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *", [title, description || "", url || "", level || f, f, seq, contentData || "", mimeType || "", s.id]);
+  const { title, description, url, level, folder, unit, sequenceNo, contentData, mimeType } = await req.json();
+  if (!title?.trim()) return NextResponse.json({ error: "Title required" }, { status: 400 });
+  if (!String(url || "").trim() && !String(contentData || "").trim()) return NextResponse.json({ error: "Add a lesson URL, upload a PDF, or provide both." }, { status: 400 });
+  if (url && !/^https:\/\//i.test(String(url).trim())) return NextResponse.json({ error: "Lesson links must start with https://" }, { status: 400 });
+  const f = folder || level || "Level 1", seq = Number(sequenceNo) || 1, u = String(unit || "").trim();
+  const r = await query("INSERT INTO materials(title,description,url,level,folder,unit,sequence_no,content_data,mime_type,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *", [title.trim(), description || "", String(url || "").trim(), level || f, f, u, seq, contentData || "", mimeType || "", s.id]);
   return NextResponse.json(r.rows[0]);
 }
 
 export async function PATCH(req: Request) {
   await requireRole(["ADMIN"]);
-  let body: { materialId?: string; title?: string; description?: string; url?: string; level?: string; folder?: string; sequenceNo?: string | number; contentData?: string; mimeType?: string };
+  let body: { materialId?: string; title?: string; description?: string; url?: string; level?: string; folder?: string; unit?: string; sequenceNo?: string | number; contentData?: string; mimeType?: string };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid edit request." }, { status: 400 });
   }
-  const { materialId, title, description, url, level, folder, sequenceNo, contentData, mimeType } = body;
+  const { materialId, title, description, url, level, folder, unit, sequenceNo, contentData, mimeType } = body;
   if (!materialId) return NextResponse.json({ error: "A material ID is required." }, { status: 400 });
   if (!title?.trim()) return NextResponse.json({ error: "Title required" }, { status: 400 });
   const existing = await query("SELECT id FROM materials WHERE id=$1", [materialId]);
   if (!existing.rowCount) return NextResponse.json({ error: "Material not found." }, { status: 404 });
-  const f = folder || level || "Level 1", seq = Number(sequenceNo) || 1;
+  if (!String(url || "").trim() && !String(contentData || "").trim()) {
+    const existingContent = await query<any>("SELECT content_data FROM materials WHERE id=$1", [materialId]);
+    if (!String(existingContent.rows[0]?.content_data || "").trim()) return NextResponse.json({ error: "Add a lesson URL, upload a PDF, or provide both." }, { status: 400 });
+  }
+  if (url && !/^https:\/\//i.test(String(url).trim())) return NextResponse.json({ error: "Lesson links must start with https://" }, { status: 400 });
+  const f = folder || level || "Level 1", seq = Number(sequenceNo) || 1, u = String(unit || "").trim();
   let updated;
   if (contentData) {
-    updated = await query("UPDATE materials SET title=$1,description=$2,url=$3,level=$4,folder=$5,sequence_no=$6,content_data=$7,mime_type=$8 WHERE id=$9 RETURNING *", [title.trim(), description || "", url || "", level || f, f, seq, contentData, mimeType || "", materialId]);
+    updated = await query("UPDATE materials SET title=$1,description=$2,url=$3,level=$4,folder=$5,unit=$6,sequence_no=$7,content_data=$8,mime_type=$9 WHERE id=$10 RETURNING *", [title.trim(), description || "", String(url || "").trim(), level || f, f, u, seq, contentData, mimeType || "", materialId]);
   } else {
-    updated = await query("UPDATE materials SET title=$1,description=$2,url=$3,level=$4,folder=$5,sequence_no=$6 WHERE id=$7 RETURNING *", [title.trim(), description || "", url || "", level || f, f, seq, materialId]);
+    updated = await query("UPDATE materials SET title=$1,description=$2,url=$3,level=$4,folder=$5,unit=$6,sequence_no=$7 WHERE id=$8 RETURNING *", [title.trim(), description || "", String(url || "").trim(), level || f, f, u, seq, materialId]);
   }
   return NextResponse.json(updated.rows[0]);
 }
