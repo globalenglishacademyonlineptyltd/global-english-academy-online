@@ -7,7 +7,7 @@ export async function POST(req:Request){
  const{lessonId,roomCode,durationSeconds,mimeType,data}=await req.json();
  if(!lessonId||!data)return NextResponse.json({error:"lessonId and recording data are required."},{status:400});
  if(typeof data!=="string"||!data.startsWith("data:"))return NextResponse.json({error:"Invalid recording data."},{status:400});
- if(data.length>18_000_000)return NextResponse.json({error:"Recording is too large. Please keep lessons under the supported recording size."},{status:413});
+ if(data.length>120_000_000)return NextResponse.json({error:"Recording is too large for the current storage limit. Please shorten the recording and try again."},{status:413});
  const lesson=await query<any>("SELECT id,teacher_id,student_id,room_code FROM lessons WHERE id=$1",[lessonId]);
  if(!lesson.rowCount)return NextResponse.json({error:"Lesson not found."},{status:404});
  const l=lesson.rows[0];
