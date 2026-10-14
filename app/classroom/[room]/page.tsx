@@ -142,6 +142,7 @@ export default function Classroom(){
      const combined=new MediaStream(tracks);
      const mime=["video/webm;codecs=vp9,opus","video/webm;codecs=vp8,opus","video/webm"].find(t=>MediaRecorder.isTypeSupported(t))||"";
      const mr=new MediaRecorder(combined,{...(mime?{mimeType:mime}:{}),videoBitsPerSecond:350000,audioBitsPerSecond:64000});
+     recordingSavePromise.current=new Promise<void>(resolve=>{finishRecordingSave.current=resolve;});
      recordChunks.current=[];recordStarted.current=Date.now();
      mr.ondataavailable=e=>{if(e.data?.size)recordChunks.current.push(e.data);};
      mr.onerror=()=>setStatus("Recording encountered a browser error. Please stop and try again.");
