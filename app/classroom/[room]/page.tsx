@@ -192,7 +192,8 @@ export default function Classroom(){
  const giveReward=async(type:string)=>{if(!lesson||rewards.length>=15)return;const r=await fetch("/api/rewards",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:lesson.id,rewardType:type})});const j=await r.json();if(r.ok)setRewards(v=>v.concat([j]));};
  const time=String(Math.floor(recordTime/60)).padStart(2,"0")+":"+String(recordTime%60).padStart(2,"0");
  const material=materials[0];
- const isBrightLesson=!!material?.url&&/^https:\/\/(www\.)?englishbrightesl\.com\//i.test(material.url);\n const isPdfOnly=!!material&&!material.url&&!!(material.content_data||material.mime_type?.toLowerCase().includes("pdf"));
+ const isBrightLesson=!!material?.url&&/^https:\/\/(www\.)?englishbrightesl\.com\//i.test(material.url);
+ const isPdfOnly=!!material&&!material.url&&!!(material.content_data||material.mime_type?.toLowerCase().includes("pdf"));
 
  if(loading)return <main className="classroom-loading">Loading classroom…</main>;
  if(error)return <main className="classroom-error"><div><h2>{error}</h2><button onClick={()=>router.replace("/dashboard")}>Back to Dashboard</button></div></main>;
