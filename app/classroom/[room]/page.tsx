@@ -110,75 +110,180 @@ export default function Classroom(){
  useEffect(()=>{if(!lesson||me?.role!=="TEACHER")return;const ms=new Date(lesson.ends_at).getTime()-Date.now();if(ms<=0)return;const id=setTimeout(()=>{fetch("/api/classroom-complete",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:lesson.id})}).catch(()=>{})},ms+1000);return()=>clearTimeout(id)},[lesson,me]);
  useEffect(()=>{if(!recording)return;const t=setInterval(()=>{if(recordStarted.current)setRecordTime(Math.floor((Date.now()-recordStarted.current)/1000));},1000);return()=>clearInterval(t);},[recording]);
 
- const resolveRecordingSave=()=>{finishRecordingSave.current?.();finishRecordingSave.current=null;recordingSavePromise.current=null;};
- const startRecording=async()=>{
-   if(recording||!lesson)return;if(recordingSavePromise.current){setStatus("Saving the previous recording…");return;}
-   if(!navigator.mediaDevices?.getDisplayMedia){
+ const resolveRecordingSave = () => {
+   finishRecordingSave.current?.();
+   finishRecordingSave.current = null;
+   recordingSavePromise.current = null;
+ };
+
+ const startRecording = async () => {
+   if (recording || !lesson) return;
+   if (recordingSavePromise.current) {
+     setStatus("Saving the previous recording…");
+     return;
+   }
+   if (!navigator.mediaDevices?.getDisplayMedia) {
      setStatus("Full-page recording is unavailable in this browser. Use desktop Chrome; mobile Chrome does not support this capture API.");
      return;
    }
-   try{
-     // Browser permission is required each session. Choose “This Tab” to include the real interactive lesson and both camera overlays.
-     const display=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:15},audio:true,preferCurrentTab:true});
-     screenStream.current=display;
-     const tracks=[...display.getVideoTracks()];
-     const audioTracks=[...display.getAudioTracks()];
-     // Mix local microphone audio with shared-tab audio when the browser supplies both.
-     try{
-       const AC=window.AudioContext||(window as any).webkitAudioContext;
-       if(AC){
-         const ac=new AC();audioContext.current=ac;
-         const dest=ac.createMediaStreamDestination();
-         if(localStream.current?.getAudioTracks().length){
-           const mic=ac.createMediaStreamSource(new MediaStream(localStream.current.getAudioTracks()));
+
+   try {
+     // The teacher must approve Chrome's screen/tab-share prompt each time.
+     const display = await navigator.mediaDevices.getDisplayMedia({
+       video: { frameRate: 15 },
+       audio: true,
+       preferCurrentTab: true
+     });
+     screenStream.current = display;
+     const tracks: MediaStreamTrack[] = [...display.getVideoTracks()];
+     const audioTracks = display.getAudioTracks();
+
+     try {
+       const AC = window.AudioContext || (window as any).webkitAudioContext;
+       if (AC) {
+         const ac = new AC();
+         audioContext.current = ac;
+         const dest = ac.createMediaStreamDestination();
+         const microphoneTracks = localStream.current?.getAudioTracks() || [];
+         if (microphoneTracks.length) {
+           const mic = ac.createMediaStreamSource(new MediaStream(microphoneTracks));
            mic.connect(dest);
          }
-         if(audioTracks.length){
-           const tab=ac.createMediaStreamSource(new MediaStream(audioTracks));
-           tab.connect(dest);
+         if (audioTracks.length) {
+           const tabAudio = ac.createMediaStreamSource(new MediaStream(audioTracks));
+           tabAudio.connect(dest);
          }
-         dest.stream.getAudioTracks().forEach(t=>tracks.push(t));
-       }else tracks.push(...audioTracks);
-     }catch{tracks.push(...audioTracks);}
-     const combined=new MediaStream(tracks);
-     const mime=["video/webm;codecs=vp9,opus","video/webm;codecs=vp8,opus","video/webm"].find(t=>MediaRecorder.isTypeSupported(t))||"";
-     const mr=new MediaRecorder(combined,{...(mime?{mimeType:mime}:{}),videoBitsPerSecond:350000,audioBitsPerSecond:64000});
-     recordingSavePromise.current=new Promise<void>(resolve=>{finishRecordingSave.current=resolve;});
-     recordChunks.current=[];recordStarted.current=Date.now();
-     mr.ondataavailable=e=>{if(e.data?.size)recordChunks.current.push(e.data);};
-     mr.onerror=()=>setStatus("Recording encountered a browser error. Please stop and try again.");
-     mr.onstop=async()=>{
-       const durationSeconds=Math.max(0,Math.floor((Date.now()-recordStarted.current)/1000));
-       recordStarted.current=0;
-       combined.getTracks().forEach(t=>t.stop());
-       screenStream.current?.getTracks().forEach(t=>t.stop());screenStream.current=null;
-       try{await audioContext.current?.close();}catch{}audioContext.current=null;
-       const blob=new Blob(recordChunks.current,{type:mr.mimeType||"video/webm"});
-       // Upload to the existing recording endpoint; it uses configured object storage for long recordings.
-       if(blob.size>200*1024*1024){setStatus("Recording is larger than the 200 MB recording limit. The recording was not saved.");setRecording(false);resolveRecordingSave();return;}
-       const reader=new FileReader();
-       reader.onerror=()=>{setStatus("Recording could not be prepared for saving.");setRecording(false);resolveRecordingSave();};
-       reader.onload=async()=>{
-         try{
-           const response=await fetch("/api/recordings",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:lesson.id,roomCode:room,durationSeconds,mimeType:blob.type,data:reader.result})});
-           const result=await response.json().catch(()=>({}));
-           setStatus(response.ok?"Full classroom recording saved":result.error||"Recording could not be saved.");
-         }catch{setStatus("Recording upload failed. Check the connection before ending the class.");}
-         setRecording(false);resolveRecordingSave();
+         dest.stream.getAudioTracks().forEach(track => tracks.push(track));
+       } else {
+         tracks.push(...audioTracks);
+       }
+     } catch {
+       tracks.push(...audioTracks);
+     }
+
+     const combined = new MediaStream(tracks);
+     const mime = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"]
+       .find(type => MediaRecorder.isTypeSupported(type)) || "";
+     const mr = new MediaRecorder(combined, {
+       ...(mime ? { mimeType: mime } : {}),
+       videoBitsPerSecond: 350000,
+       audioBitsPerSecond: 64000
+     });
+
+     recordingSavePromise.current = new Promise<void>(resolve => {
+       finishRecordingSave.current = resolve;
+     });
+     recordChunks.current = [];
+     recordStarted.current = Date.now();
+     mr.ondataavailable = event => {
+       if (event.data?.size) recordChunks.current.push(event.data);
+     };
+     mr.onerror = () => setStatus("Recording encountered a browser error. Please stop and try again.");
+
+     mr.onstop = async () => {
+       const durationSeconds = Math.max(0, Math.floor((Date.now() - recordStarted.current) / 1000));
+       recordStarted.current = 0;
+       combined.getTracks().forEach(track => track.stop());
+       screenStream.current?.getTracks().forEach(track => track.stop());
+       screenStream.current = null;
+       try {
+         await audioContext.current?.close();
+       } catch {}
+       audioContext.current = null;
+
+       const blob = new Blob(recordChunks.current, { type: mr.mimeType || "video/webm" });
+       if (blob.size > 200 * 1024 * 1024) {
+         setStatus("Recording is larger than the 200 MB recording limit. The recording was not saved.");
+         setRecording(false);
+         resolveRecordingSave();
+         return;
+       }
+
+       const reader = new FileReader();
+       reader.onerror = () => {
+         setStatus("Recording could not be prepared for saving.");
+         setRecording(false);
+         resolveRecordingSave();
+       };
+       reader.onload = async () => {
+         try {
+           const response = await fetch("/api/recordings", {
+             method: "POST",
+             headers: { "content-type": "application/json" },
+             body: JSON.stringify({
+               lessonId: lesson.id,
+               roomCode: room,
+               durationSeconds,
+               mimeType: blob.type,
+               data: reader.result
+             })
+           });
+           const result = await response.json().catch(() => ({}));
+           setStatus(response.ok ? "Full classroom recording saved" : result.error || "Recording could not be saved.");
+         } catch {
+           setStatus("Recording upload failed. Check the connection before ending the class.");
+         }
+         setRecording(false);
+         resolveRecordingSave();
        };
        reader.readAsDataURL(blob);
      };
-     recorder.current=mr;setRecordTime(0);setRecording(true);setStatus("Full classroom recording is running");mr.start(1000);
-     display.getVideoTracks()[0]?.addEventListener("ended",()=>{if(mr.state!=="inactive")mr.stop();});
-   }catch(e){
+
+     recorder.current = mr;
+     setRecordTime(0);
+     setRecording(true);
+     setStatus("Full classroom recording is running");
+     mr.start(1000);
+     display.getVideoTracks()[0]?.addEventListener("ended", () => {
+       if (mr.state !== "inactive") mr.stop();
+     });
+   } catch (error) {
      resolveRecordingSave();
-     setStatus(e instanceof Error&&e.name==="NotAllowedError"?"Screen recording was cancelled or permission was denied.":"Full-page recording could not start in this browser.");
+     setStatus(
+       error instanceof Error && error.name === "NotAllowedError"
+         ? "Screen recording was cancelled or permission was denied."
+         : "Full-page recording could not start in this browser."
+     );
    }
  };
 
- const stopRecording=()=>{if(recorder.current&&recorder.current.state!=="inactive")recorder.current.stop();recorder.current=null;setRecording(false);};
+ const stopRecording = () => {
+   if (recorder.current && recorder.current.state !== "inactive") recorder.current.stop();
+   recorder.current = null;
+   setRecording(false);
+ };
 
- const endClass=async()=>{if(me?.role==="ADMIN"||!lesson)return;if(ending)return;setEnding(true);const pendingRecordingSave=recordingSavePromise.current;if(recording)stopRecording();if(pendingRecordingSave)await pendingRecordingSave;try{await fetch("/api/classroom-complete",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:lesson.id})});const exit=await fetch("/api/classroom-exit",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:lesson.id})});if(!exit.ok)throw new Error("Could not register classroom exit.");let state=await exit.json();while(!state.bothExited){await new Promise(resolve=>setTimeout(resolve,1500));const check=await fetch("/api/classroom-exit?lessonId="+encodeURIComponent(lesson.id),{cache:"no-store"});if(!check.ok)throw new Error("Could not check classroom exit status.");state=await check.json();}window.location.replace("https://globalenglishacademyonline.co.za/");}catch{setEnding(false);setError("We could not confirm both participants have exited. Please try End Class again.");}};
+ const endClass = async () => {
+   if (me?.role === "ADMIN" || !lesson || ending) return;
+   setEnding(true);
+   const pendingRecordingSave = recordingSavePromise.current;
+   if (recording) stopRecording();
+   if (pendingRecordingSave) await pendingRecordingSave;
+   try {
+     await fetch("/api/classroom-complete", {
+       method: "POST",
+       headers: { "content-type": "application/json" },
+       body: JSON.stringify({ lessonId: lesson.id })
+     });
+     const exit = await fetch("/api/classroom-exit", {
+       method: "POST",
+       headers: { "content-type": "application/json" },
+       body: JSON.stringify({ lessonId: lesson.id })
+     });
+     if (!exit.ok) throw new Error("Could not register classroom exit.");
+     let state = await exit.json();
+     while (!state.bothExited) {
+       await new Promise(resolve => setTimeout(resolve, 1500));
+       const check = await fetch("/api/classroom-exit?lessonId=" + encodeURIComponent(lesson.id), { cache: "no-store" });
+       if (!check.ok) throw new Error("Could not check classroom exit status.");
+       state = await check.json();
+     }
+     window.location.replace("https://globalenglishacademyonline.co.za/");
+   } catch {
+     setEnding(false);
+     setError("We could not confirm both participants have exited. Please try End Class again.");
+   }
+ };
 
  const startGame=(g:any)=>{if(!teacher)return;setGame(g);setInteractive(true);setScore(0);setReward("");setSortDrag("");setOrderPick([]);setShowGames(false);broadcast({game:g,interactive:true,score:0,reward:""});};
  const answer=(item:string)=>{if(!student||!interactive||!game)return;let ok=false;if(game.id==="pick")ok=item===game.answer;if(game.id==="sort"){const parts=item.split("|");const land=parts[0].includes("Dog")||parts[0].includes("Cat");const water=parts[0].includes("Fish")||parts[0].includes("Shark");ok=(land&&parts[1]==="Land")||(water&&parts[1]==="Water");}if(game.id==="order"){const nextOrder=orderPick.concat([item]);setOrderPick(nextOrder);ok=nextOrder.join("|")===game.items.join("|");if(!ok&&nextOrder.length>=game.items.length){setOrderPick([]);setReward("Try the order again!");return;}}const next=ok?score+1:score;setScore(next);setReward(ok?"⭐ Great job!":"Try again!");signal({type:"state",interactive,game,score:next,reward:ok?"⭐ Great job!":"Try again!",positions});};
