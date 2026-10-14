@@ -162,13 +162,14 @@ export default function Classroom(){
            const result=await response.json().catch(()=>({}));
            setStatus(response.ok?"Full classroom recording saved":result.error||"Recording could not be saved.");
          }catch{setStatus("Recording upload failed. Check the connection before ending the class.");}
-         setRecording(false);
+         setRecording(false);resolveRecordingSave();
        };
        reader.readAsDataURL(blob);
      };
      recorder.current=mr;setRecordTime(0);setRecording(true);setStatus("Full classroom recording is running");mr.start(1000);
      display.getVideoTracks()[0]?.addEventListener("ended",()=>{if(mr.state!=="inactive")mr.stop();});
    }catch(e){
+     resolveRecordingSave();
      setStatus(e instanceof Error&&e.name==="NotAllowedError"?"Screen recording was cancelled or permission was denied.":"Full-page recording could not start in this browser.");
    }
  };
