@@ -110,8 +110,9 @@ export default function Classroom(){
  useEffect(()=>{if(!lesson||me?.role!=="TEACHER")return;const ms=new Date(lesson.ends_at).getTime()-Date.now();if(ms<=0)return;const id=setTimeout(()=>{fetch("/api/classroom-complete",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:lesson.id})}).catch(()=>{})},ms+1000);return()=>clearTimeout(id)},[lesson,me]);
  useEffect(()=>{if(!recording)return;const t=setInterval(()=>{if(recordStarted.current)setRecordTime(Math.floor((Date.now()-recordStarted.current)/1000));},1000);return()=>clearInterval(t);},[recording]);
 
- const resolveRecordingSave=()=>{finishRecordingSave.current?.();finishRecordingSave.current=null;recordingSavePromise.current=null;};\n const startRecording=async()=>{
-   if(recording||!lesson)return;
+ const resolveRecordingSave=()=>{finishRecordingSave.current?.();finishRecordingSave.current=null;recordingSavePromise.current=null;};
+ const startRecording=async()=>{
+   if(recording||!lesson)return;if(recordingSavePromise.current){setStatus("Saving the previous recording…");return;}
    if(!navigator.mediaDevices?.getDisplayMedia){
      setStatus("Full-page recording is unavailable in this browser. Use desktop Chrome; mobile Chrome does not support this capture API.");
      return;
@@ -153,7 +154,7 @@ export default function Classroom(){
        screenStream.current?.getTracks().forEach(t=>t.stop());screenStream.current=null;
        try{await audioContext.current?.close();}catch{}audioContext.current=null;
        const blob=new Blob(recordChunks.current,{type:mr.mimeType||"video/webm"});
-       // Existing recording endpoint stores a data URL and enforces a payload cap. Fail loudly rather than claim a failed save succeeded.
+       // Upload to the existing recording endpoint; it uses configured object storage for long recordings.
        if(blob.size>200*1024*1024){setStatus("Recording is larger than the 200 MB recording limit. The recording was not saved.");setRecording(false);resolveRecordingSave();return;}
        const reader=new FileReader();
        reader.onerror=()=>{setStatus("Recording could not be prepared for saving.");setRecording(false);resolveRecordingSave();};
