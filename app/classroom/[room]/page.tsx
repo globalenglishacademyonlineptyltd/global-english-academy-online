@@ -155,8 +155,8 @@ export default function Classroom(){
        // Existing recording endpoint stores a data URL and enforces a payload cap. Fail loudly rather than claim a failed save succeeded.
        if(blob.size>85*1024*1024){setStatus("Recording is too large for the current recording storage limit. The recording was not saved.");setRecording(false);resolveRecordingSave();return;}
        const reader=new FileReader();
-       reader.onerror=()=>{setStatus("Recording could not be prepared for saving.");setRecording(false);};
-       reader.onloadend=async()=>{
+       reader.onerror=()=>{setStatus("Recording could not be prepared for saving.");setRecording(false);resolveRecordingSave();};
+       reader.onload=async()=>{
          try{
            const response=await fetch("/api/recordings",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:lesson.id,roomCode:room,durationSeconds,mimeType:blob.type,data:reader.result})});
            const result=await response.json().catch(()=>({}));
