@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import PdfViewer from "@/app/components/PdfViewer";
 
-const levels = Array.from({ length: 8 }, (_, i) => "Level " + (i + 1));
+const levels = Array.from({ length: 8 }, (_, i) => "Level " + i);
 const folders = [...levels, "Demo", "Ferris Wheel"];
 
 export default function Materials() {
@@ -150,7 +150,7 @@ export default function Materials() {
       <div className="topbar">
         <div>
           <h1>Lesson Materials</h1>
-          <p className="muted">Organise the curriculum into eight levels, with separate Demo and Ferris Wheel folders.</p>
+          <p className="muted">Add original English Bright ESL lesson URLs by level and sequence. The original interactive lesson remains hosted on English Bright.</p>
         </div>
       </div>
 
@@ -164,7 +164,7 @@ export default function Materials() {
         </div>
         <label className="input file-input">{editingMaterialId ? "Replace workbook (optional)" : "Upload PDF / lesson file"} <input type="file" accept=".pdf,.png,.jpg,.jpeg,.webp" onChange={e => setFile(e.target.files?.[0] || null)} /></label>
         {editingMaterialId && <p className="muted small">Leave the file field empty to keep the current uploaded workbook.</p>}
-        <input className="input" placeholder="Optional external URL" value={url} onChange={e => setUrl(e.target.value)} />
+        <input className="input" placeholder="English Bright lesson URL (https://englishbrightesl.com/lesson/...)" value={url} onChange={e => setUrl(e.target.value)} />
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><button className="primary compact-btn" onClick={add}>{editingMaterialId ? "Save Changes" : "Save material"}</button>{editingMaterialId && <button type="button" className="secondary compact-btn" onClick={cancelEdit}>Cancel Edit</button>}</div>
         {message && <div className="muted small" role="status" style={{ marginTop: 10 }}>{message}</div>}
       </div>}
