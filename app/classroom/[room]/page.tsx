@@ -154,7 +154,7 @@ export default function Classroom(){
        try{await audioContext.current?.close();}catch{}audioContext.current=null;
        const blob=new Blob(recordChunks.current,{type:mr.mimeType||"video/webm"});
        // Existing recording endpoint stores a data URL and enforces a payload cap. Fail loudly rather than claim a failed save succeeded.
-       if(blob.size>85*1024*1024){setStatus("Recording is too large for the current recording storage limit. The recording was not saved.");setRecording(false);resolveRecordingSave();return;}
+       if(blob.size>200*1024*1024){setStatus("Recording is larger than the 200 MB recording limit. The recording was not saved.");setRecording(false);resolveRecordingSave();return;}
        const reader=new FileReader();
        reader.onerror=()=>{setStatus("Recording could not be prepared for saving.");setRecording(false);resolveRecordingSave();};
        reader.onload=async()=>{
