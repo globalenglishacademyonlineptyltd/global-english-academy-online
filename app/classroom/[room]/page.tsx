@@ -193,7 +193,6 @@ export default function Classroom(){
  const time=String(Math.floor(recordTime/60)).padStart(2,"0")+":"+String(recordTime%60).padStart(2,"0");
  const material=materials[0];
  const isBrightLesson=!!material?.url&&/^https:\/\/(www\.)?englishbrightesl\.com\//i.test(material.url);
- const isPdfOnly=!!material&&!material.url&&!!(material.content_data||material.mime_type?.toLowerCase().includes("pdf"));
 
  if(loading)return <main className="classroom-loading">Loading classroom…</main>;
  if(error)return <main className="classroom-error"><div><h2>{error}</h2><button onClick={()=>router.replace("/dashboard")}>Back to Dashboard</button></div></main>;
@@ -214,7 +213,7 @@ export default function Classroom(){
    <section className="gc-main">
     <div className="gc-stage">
      {!isBrightLesson&&<div className="gc-lessonbar"><strong>{lesson.topic||"English Lesson"}</strong><span>{interactive?"🟢 Interactive Mode ON":"Teaching Mode"} {recording?" • 🔴 Recording":""}</span></div>}
-      <div className="gc-material" style={{position:"relative",width:"100%",height:"100%",minHeight:420,overflow:"hidden",background:"#fff"}}>
+      <div className="gc-material" style={{position:"relative",width:"100%",height:"100%",minHeight:420,overflow:"hidden",background:"#fff"}}>{material?.url&&/^https:\/\/(www\.)?englishbrightesl\.com\//i.test(material.url)?<iframe key={material.id} src={material.url} title={"English Bright ESL — "+material.title} allow="autoplay; fullscreen; clipboard-read; clipboard-write" allowFullScreen style={{position:"absolute",inset:0,width:"100%",height:"100%",border:0,background:"#fff"}}/>:<div className="gc-placeholder"><div>📚</div><h2>{lesson.topic||"Let's learn English!"}</h2><p>{material?.title||"No English Bright URL is assigned to this lesson yet."}</p>{material?.url&&<a href={material.url} target="_blank" rel="noreferrer">Open assigned lesson in a new tab</a>}</div>}</div>
        {isBrightLesson && material?.url ? (
          <iframe key={material.id} src={material.url} title={"English Bright ESL — "+material.title} allow="autoplay; fullscreen; clipboard-read; clipboard-write" allowFullScreen style={{position:"absolute",inset:0,width:"100%",height:"100%",border:0,background:"#fff"}}/>
        ) : isPdfOnly ? (
@@ -244,6 +243,6 @@ export default function Classroom(){
 
   {showLayout&&<div className="gc-modal-backdrop" onClick={()=>setShowLayout(false)}><div className="gc-modal" onClick={e=>e.stopPropagation()}><div className="gc-modal-head"><h2>Role-play Camera Layout</h2><button onClick={()=>setShowLayout(false)}>Close</button></div><p>Use a preset or drag the camera windows directly on the lesson stage.</p><div className="gc-layout-buttons"><button onClick={()=>setLayout("normal")}>Normal Corners</button><button onClick={()=>setLayout("roleplay")}>Role Play</button><button onClick={()=>setLayout("side")}>Side by Side</button></div></div></div>}
 
-  {!isBrightLesson&&!isPdfOnly&&teacher&&openMaterial&&<div className="gc-modal-backdrop" onContextMenu={e=>e.preventDefault()}><div className="gc-material-modal"><div className="gc-modal-head"><h2>📄 {openMaterial.title}</h2><button onClick={()=>setOpenMaterial(null)}>Close</button></div><div className="gc-material-frame"><PdfViewer src={"/api/lesson-materials/file?lessonId="+encodeURIComponent(lesson.id)+"&materialId="+encodeURIComponent(openMaterial.id)} title={openMaterial.title}/></div><p>View-only classroom material.</p></div></div>}
+  {!isBrightLesson&&teacher&&openMaterial&&<div className="gc-modal-backdrop" onContextMenu={e=>e.preventDefault()}><div className="gc-material-modal"><div className="gc-modal-head"><h2>📄 {openMaterial.title}</h2><button onClick={()=>setOpenMaterial(null)}>Close</button></div><div className="gc-material-frame"><PdfViewer src={"/api/lesson-materials/file?lessonId="+encodeURIComponent(lesson.id)+"&materialId="+encodeURIComponent(openMaterial.id)} title={openMaterial.title}/></div><p>View-only classroom material.</p></div></div>}
  </main>;
 }
