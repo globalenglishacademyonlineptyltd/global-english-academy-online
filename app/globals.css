@@ -310,7 +310,7 @@ body{background:#f5f8fc}
 
 /* Clean, lesson-only English Bright classroom */
 .gea-classroom.gc-clean-lesson{height:100dvh;min-height:100dvh;overflow:hidden;background:#05070b}
-.gc-clean-lesson .gc-top{position:absolute;z-index:60;top:10px;right:10px;min-height:0;padding:6px;background:rgba(10,15,25,.78);border:1px solid rgba(255,255,255,.2);border-radius:12px;gap:6px;max-width:calc(100vw - 20px);backdrop-filter:blur(10px)}
+.gc-clean-lesson .gc-top{position:absolute;z-index:60;top:auto;right:auto;bottom:10px;left:10px;min-height:0;padding:6px;background:rgba(10,15,25,.78);border:1px solid rgba(255,255,255,.2);border-radius:12px;gap:6px;max-width:calc(100vw - 20px);backdrop-filter:blur(10px)}
 .gc-clean-lesson .gc-brand,.gc-clean-lesson .gc-status{display:none}
 .gc-clean-lesson .gc-actions{gap:5px}
 .gc-clean-lesson .gc-actions button{padding:7px 9px;font-size:10px}
