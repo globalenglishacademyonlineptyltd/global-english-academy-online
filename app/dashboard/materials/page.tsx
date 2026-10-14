@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import PdfViewer from "@/app/components/PdfViewer";
 
-const levels = Array.from({ length: 8 }, (_, i) => "Level " + i);
+const levels = Array.from({ length: 8 }, (_, i) => "Level " + (i + 1));
 const folders = [...levels, "Demo", "Ferris Wheel"];
 
 export default function Materials() {
