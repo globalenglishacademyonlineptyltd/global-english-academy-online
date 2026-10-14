@@ -25,7 +25,7 @@ export default function Classroom(){
  const [showGames,setShowGames]=useState(false),[showLayout,setShowLayout]=useState(false),[openMaterial,setOpenMaterial]=useState<any>(null),[positions,setPositions]=useState<any>({teacher:{x:76,y:0,w:22},student:{x:76,y:26,w:22}});
  const [loading,setLoading]=useState(true),[error,setError]=useState(""),[status,setStatus]=useState("Starting classroom…"),[ending,setEnding]=useState(false);
 
- const localVideo=useRef<HTMLVideoElement|null>(null),remoteVideo=useRef<HTMLVideoElement|null>(null),localStream=useRef<MediaStream|null>(null),remoteStream=useRef<MediaStream|null>(null),peer=useRef<RTCPeerConnection|null>(null),after=useRef("1970-01-01T00:00:00.000Z"),seen=useRef<Set<string>>(new Set()),poller=useRef<any>(null),recorder=useRef<MediaRecorder|null>(null),recordChunks=useRef<Blob[]>([]),recordStarted=useRef<number>(0),canvas=useRef<HTMLCanvasElement|null>(null),screenStream=useRef<MediaStream|null>(null),audioContext=useRef<AudioContext|null>(null);
+ const localVideo=useRef<HTMLVideoElement|null>(null),remoteVideo=useRef<HTMLVideoElement|null>(null),localStream=useRef<MediaStream|null>(null),remoteStream=useRef<MediaStream|null>(null),peer=useRef<RTCPeerConnection|null>(null),after=useRef("1970-01-01T00:00:00.000Z"),seen=useRef<Set<string>>(new Set()),poller=useRef<any>(null),recorder=useRef<MediaRecorder|null>(null),recordChunks=useRef<Blob[]>([]),recordStarted=useRef<number>(0),canvas=useRef<HTMLCanvasElement|null>(null),screenStream=useRef<MediaStream|null>(null),audioContext=useRef<AudioContext|null>(null),recordingSavePromise=useRef<Promise<void>|null>(null),finishRecordingSave=useRef<(()=>void)|null>(null);
 
  const teacher=me?.role==="TEACHER",student=me?.role==="STUDENT";
 
@@ -110,7 +110,7 @@ export default function Classroom(){
  useEffect(()=>{if(!lesson||me?.role!=="TEACHER")return;const ms=new Date(lesson.ends_at).getTime()-Date.now();if(ms<=0)return;const id=setTimeout(()=>{fetch("/api/classroom-complete",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:lesson.id})}).catch(()=>{})},ms+1000);return()=>clearTimeout(id)},[lesson,me]);
  useEffect(()=>{if(!recording)return;const t=setInterval(()=>{if(recordStarted.current)setRecordTime(Math.floor((Date.now()-recordStarted.current)/1000));},1000);return()=>clearInterval(t);},[recording]);
 
- const startRecording=async()=>{
+ const resolveRecordingSave=()=>{finishRecordingSave.current?.();finishRecordingSave.current=null;recordingSavePromise.current=null;};\n const startRecording=async()=>{
    if(recording||!lesson)return;
    if(!navigator.mediaDevices?.getDisplayMedia){
      setStatus("Full-page recording is unavailable in this browser. Use desktop Chrome; mobile Chrome does not support this capture API.");
@@ -153,7 +153,7 @@ export default function Classroom(){
        try{await audioContext.current?.close();}catch{}audioContext.current=null;
        const blob=new Blob(recordChunks.current,{type:mr.mimeType||"video/webm"});
        // Existing recording endpoint stores a data URL and enforces a payload cap. Fail loudly rather than claim a failed save succeeded.
-       if(blob.size>85*1024*1024){setStatus("Recording is too large for the current recording storage limit. The recording was not saved.");setRecording(false);return;}
+       if(blob.size>85*1024*1024){setStatus("Recording is too large for the current recording storage limit. The recording was not saved.");setRecording(false);resolveRecordingSave();return;}
        const reader=new FileReader();
        reader.onerror=()=>{setStatus("Recording could not be prepared for saving.");setRecording(false);};
        reader.onloadend=async()=>{
@@ -175,7 +175,7 @@ export default function Classroom(){
 
  const stopRecording=()=>{if(recorder.current&&recorder.current.state!=="inactive")recorder.current.stop();recorder.current=null;setRecording(false);};
 
- const endClass=async()=>{if(me?.role==="ADMIN"||!lesson)return;if(ending)return;setEnding(true);if(recording)stopRecording();try{await fetch("/api/classroom-complete",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:lesson.id})});const exit=await fetch("/api/classroom-exit",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:lesson.id})});if(!exit.ok)throw new Error("Could not register classroom exit.");let state=await exit.json();while(!state.bothExited){await new Promise(resolve=>setTimeout(resolve,1500));const check=await fetch("/api/classroom-exit?lessonId="+encodeURIComponent(lesson.id),{cache:"no-store"});if(!check.ok)throw new Error("Could not check classroom exit status.");state=await check.json();}window.location.replace("https://globalenglishacademyonline.co.za/");}catch{setEnding(false);setError("We could not confirm both participants have exited. Please try End Class again.");}};
+ const endClass=async()=>{if(me?.role==="ADMIN"||!lesson)return;if(ending)return;setEnding(true);const pendingRecordingSave=recordingSavePromise.current;if(recording)stopRecording();if(pendingRecordingSave)await pendingRecordingSave;try{await fetch("/api/classroom-complete",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:lesson.id})});const exit=await fetch("/api/classroom-exit",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:lesson.id})});if(!exit.ok)throw new Error("Could not register classroom exit.");let state=await exit.json();while(!state.bothExited){await new Promise(resolve=>setTimeout(resolve,1500));const check=await fetch("/api/classroom-exit?lessonId="+encodeURIComponent(lesson.id),{cache:"no-store"});if(!check.ok)throw new Error("Could not check classroom exit status.");state=await check.json();}window.location.replace("https://globalenglishacademyonline.co.za/");}catch{setEnding(false);setError("We could not confirm both participants have exited. Please try End Class again.");}};
 
  const startGame=(g:any)=>{if(!teacher)return;setGame(g);setInteractive(true);setScore(0);setReward("");setSortDrag("");setOrderPick([]);setShowGames(false);broadcast({game:g,interactive:true,score:0,reward:""});};
  const answer=(item:string)=>{if(!student||!interactive||!game)return;let ok=false;if(game.id==="pick")ok=item===game.answer;if(game.id==="sort"){const parts=item.split("|");const land=parts[0].includes("Dog")||parts[0].includes("Cat");const water=parts[0].includes("Fish")||parts[0].includes("Shark");ok=(land&&parts[1]==="Land")||(water&&parts[1]==="Water");}if(game.id==="order"){const nextOrder=orderPick.concat([item]);setOrderPick(nextOrder);ok=nextOrder.join("|")===game.items.join("|");if(!ok&&nextOrder.length>=game.items.length){setOrderPick([]);setReward("Try the order again!");return;}}const next=ok?score+1:score;setScore(next);setReward(ok?"⭐ Great job!":"Try again!");signal({type:"state",interactive,game,score:next,reward:ok?"⭐ Great job!":"Try again!",positions});};
