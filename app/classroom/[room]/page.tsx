@@ -3,8 +3,8 @@
 import {useEffect,useRef,useState} from "react";
 import {useParams,useRouter} from "next/navigation";
 import PdfViewer from "@/app/components/PdfViewer";
-
 const clamp=(n:number,min:number,max:number)=>Math.min(max,Math.max(min,n));
+
 const GAMES=[
  {id:"pick",title:"Picture Pick",prompt:"Click the correct animal.",items:["🐶 Dog","🐱 Cat","🐟 Fish","🦁 Lion"],answer:"🐶 Dog"},
  {id:"sort",title:"Sort It",prompt:"Sort the animals into the correct group.",items:["🐶 Dog","🐱 Cat","🐟 Fish","🦈 Shark"],answer:"Land / Water"},
@@ -25,7 +25,7 @@ export default function Classroom(){
  const [showGames,setShowGames]=useState(false),[showLayout,setShowLayout]=useState(false),[openMaterial,setOpenMaterial]=useState<any>(null),[positions,setPositions]=useState<any>({teacher:{x:76,y:0,w:22},student:{x:76,y:26,w:22}});
  const [loading,setLoading]=useState(true),[error,setError]=useState(""),[status,setStatus]=useState("Starting classroom…"),[ending,setEnding]=useState(false);
 
- const localVideo=useRef<HTMLVideoElement|null>(null),remoteVideo=useRef<HTMLVideoElement|null>(null),localStream=useRef<MediaStream|null>(null),remoteStream=useRef<MediaStream|null>(null),peer=useRef<RTCPeerConnection|null>(null),after=useRef("1970-01-01T00:00:00.000Z"),seen=useRef<Set<string>>(new Set()),poller=useRef<any>(null),recorder=useRef<MediaRecorder|null>(null),recordChunks=useRef<Blob[]>([]),recordStarted=useRef<number>(0),canvas=useRef<HTMLCanvasElement|null>(null),screenStream=useRef<MediaStream|null>(null),audioContext=useRef<AudioContext|null>(null);
+ const localVideo=useRef<HTMLVideoElement|null>(null),remoteVideo=useRef<HTMLVideoElement|null>(null),localStream=useRef<MediaStream|null>(null),remoteStream=useRef<MediaStream|null>(null),peer=useRef<RTCPeerConnection|null>(null),after=useRef("1970-01-01T00:00:00.000Z"),seen=useRef<Set<string>>(new Set()),poller=useRef<any>(null),recorder=useRef<MediaRecorder|null>(null),recordChunks=useRef<Blob[]>([]),recordStarted=useRef<number>(0),canvas=useRef<HTMLCanvasElement|null>(null);
 
  const teacher=me?.role==="TEACHER",student=me?.role==="STUDENT";
 
@@ -89,7 +89,7 @@ export default function Classroom(){
        if(meRes.user.role==="ADMIN"){setLesson(found);setStatus("Admin monitoring mode — camera and microphone are off");setLoading(false);signal({type:"hello"});return;}const stream=await navigator.mediaDevices.getUserMedia({video:true,audio:true});if(!alive)return;
        localStream.current=stream;if(localVideo.current)localVideo.current.srcObject=stream;
        createPeer();setStatus("Connected — classroom ready");signal({type:"hello"});setLoading(false);
-       // Full-page recording starts from the teacher’s explicit button click because browsers require fresh user activation and a screen-sharing consent prompt.
+       // Teacher starts recording with an explicit click and screen-sharing permission.
      }catch(e){console.error("Classroom media startup failed",e);setStatus("Camera/microphone unavailable — check browser permissions and device access");setLoading(false);}
    }
    start();poll();poller.current=setInterval(poll,700);
@@ -110,95 +110,24 @@ export default function Classroom(){
  useEffect(()=>{if(!lesson||me?.role!=="TEACHER")return;const ms=new Date(lesson.ends_at).getTime()-Date.now();if(ms<=0)return;const id=setTimeout(()=>{fetch("/api/classroom-complete",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:lesson.id})}).catch(()=>{})},ms+1000);return()=>clearTimeout(id)},[lesson,me]);
  useEffect(()=>{if(!recording)return;const t=setInterval(()=>{if(recordStarted.current)setRecordTime(Math.floor((Date.now()-recordStarted.current)/1000));},1000);return()=>clearInterval(t);},[recording]);
 
-  const startRecording = async () => {
-   if (recording || !lesson) return;
-   if (!navigator.mediaDevices?.getDisplayMedia) {
-     setStatus("Full-page recording is unavailable in this browser. Use desktop Chrome; mobile Chrome does not support this capture API.");
-     return;
-   }
-   try {
-     const display = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 15 }, audio: true, preferCurrentTab: true });
-     screenStream.current = display;
-     const tracks: MediaStreamTrack[] = [...display.getVideoTracks()];
-     const tabAudio = display.getAudioTracks()[0];
-     const microphone = localStream.current?.getAudioTracks()[0];
-     if (tabAudio) tracks.push(tabAudio);
-     else if (microphone) tracks.push(microphone);
-     const combined = new MediaStream(tracks);
-     const mime = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"].find(type => MediaRecorder.isTypeSupported(type)) || "";
-     const mr = new MediaRecorder(combined, { ...(mime ? { mimeType: mime } : {}), videoBitsPerSecond: 350000, audioBitsPerSecond: 64000 });
-     recordChunks.current = [];
-     recordStarted.current = Date.now();
-     mr.ondataavailable = event => { if (event.data?.size) recordChunks.current.push(event.data); };
-     mr.onerror = () => setStatus("Recording encountered a browser error. Please stop and try again.");
-     mr.onstop = () => {
-       const durationSeconds = Math.max(0, Math.floor((Date.now() - recordStarted.current) / 1000));
-       recordStarted.current = 0;
-       combined.getTracks().forEach(track => track.stop());
-       screenStream.current?.getTracks().forEach(track => track.stop());
-       screenStream.current = null;
-       const blob = new Blob(recordChunks.current, { type: mr.mimeType || "video/webm" });
-       if (blob.size > 200 * 1024 * 1024) {
-         setStatus("Recording is larger than the 200 MB recording limit. The recording was not saved.");
-         setRecording(false);
-         return;
-       }
-       const reader = new FileReader();
-       reader.onerror = () => { setStatus("Recording could not be prepared for saving."); setRecording(false); };
-       reader.onload = async () => {
-         try {
-           const response = await fetch("/api/recordings", {
-             method: "POST",
-             headers: { "content-type": "application/json" },
-             body: JSON.stringify({ lessonId: lesson.id, roomCode: room, durationSeconds, mimeType: blob.type, data: reader.result })
-           });
-           const result = await response.json().catch(() => ({}));
-           setStatus(response.ok ? "Full classroom recording saved" : result.error || "Recording could not be saved.");
-         } catch {
-           setStatus("Recording upload failed. Check the connection before ending the class.");
-         }
-         setRecording(false);
-       };
-       reader.readAsDataURL(blob);
-     };
-     recorder.current = mr;
-     setRecordTime(0);
-     setRecording(true);
-     setStatus("Full classroom recording is running");
-     mr.start(1000);
-     display.getVideoTracks()[0]?.addEventListener("ended", () => { if (mr.state !== "inactive") mr.stop(); });
-   } catch (error) {
-     setStatus(error instanceof Error && error.name === "NotAllowedError" ? "Screen recording was cancelled or permission was denied." : "Full-page recording could not start in this browser.");
-   }
+ const startRecording=()=>{
+   if(recording||!lesson)return;
+   try{
+     if(!canvas.current)canvas.current=document.createElement("canvas");
+     const c=canvas.current,ctx=c.getContext("2d");if(!ctx)return;c.width=1280;c.height=720;
+     const draw=()=>{if(!recordStarted.current)return;ctx.fillStyle="#f4f7fb";ctx.fillRect(0,0,1280,720);ctx.fillStyle="#fff";ctx.fillRect(24,24,1232,672);ctx.fillStyle="#172033";ctx.font="bold 28px Arial";ctx.fillText(branding?.school_name||"Global English Academy",48,62);ctx.font="bold 34px Arial";ctx.fillText(game?.title||lesson.topic||"English Lesson",55,130);ctx.font="22px Arial";ctx.fillText(game?.prompt||"Live interactive English class",55,172);if(localVideo.current&&localVideo.current.readyState>=2)ctx.drawImage(localVideo.current,930,90,270,170);if(remoteVideo.current&&remoteVideo.current.readyState>=2)ctx.drawImage(remoteVideo.current,930,275,270,170);requestAnimationFrame(draw);};
+     const stream=c.captureStream(10);if(localStream.current?.getAudioTracks()[0])stream.addTrack(localStream.current.getAudioTracks()[0]);
+     const mime=MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")?"video/webm;codecs=vp9,opus":"video/webm";
+     const mr=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:800000});recordChunks.current=[];recordStarted.current=Date.now();
+     mr.ondataavailable=e=>{if(e.data.size)recordChunks.current.push(e.data);};
+     mr.onstop=()=>{stream.getTracks().forEach(t=>t.stop());const reader=new FileReader();reader.onloadend=()=>{fetch("/api/recordings",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:lesson.id,roomCode:room,durationSeconds:recordTime,mimeType:mime,data:reader.result})}).then(r=>setStatus(r.ok?"Recording saved":"Recording could not be saved")).catch(()=>setStatus("Recording could not be saved"));};reader.readAsDataURL(new Blob(recordChunks.current,{type:mime}));};
+     recorder.current=mr;setRecordTime(0);setRecording(true);mr.start(1000);draw();
+   }catch{setStatus("Recording is not supported in this browser.");}
  };
 
- const stopRecording = () => {
-   if (recorder.current && recorder.current.state !== "inactive") recorder.current.stop();
-   recorder.current = null;
-   setRecording(false);
- };
+ const stopRecording=()=>{if(recorder.current)recorder.current.stop();recorder.current=null;recordStarted.current=0;setRecording(false);};
 
- const endClass = async () => {
-   if (me?.role === "ADMIN" || !lesson || ending) return;
-   setEnding(true);
-   if (recording) stopRecording();
-   try {
-     await fetch("/api/classroom-complete", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ lessonId: lesson.id }) });
-     const exit = await fetch("/api/classroom-exit", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ lessonId: lesson.id }) });
-     if (!exit.ok) throw new Error("Could not register classroom exit.");
-     let state = await exit.json();
-     while (!state.bothExited) {
-       await new Promise(resolve => setTimeout(resolve, 1500));
-       const check = await fetch("/api/classroom-exit?lessonId=" + encodeURIComponent(lesson.id), { cache: "no-store" });
-       if (!check.ok) throw new Error("Could not check classroom exit status.");
-       state = await check.json();
-     }
-     window.location.replace("https://globalenglishacademyonline.co.za/");
-   } catch {
-     setEnding(false);
-     setError("We could not confirm both participants have exited. Please try End Class again.");
-   }
- };
+ const endClass=async()=>{if(me?.role==="ADMIN"||!lesson)return;if(ending)return;setEnding(true);if(recording)stopRecording();try{await fetch("/api/classroom-complete",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:lesson.id})});const exit=await fetch("/api/classroom-exit",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:lesson.id})});if(!exit.ok)throw new Error("Could not register classroom exit.");let state=await exit.json();while(!state.bothExited){await new Promise(resolve=>setTimeout(resolve,1500));const check=await fetch("/api/classroom-exit?lessonId="+encodeURIComponent(lesson.id),{cache:"no-store"});if(!check.ok)throw new Error("Could not check classroom exit status.");state=await check.json();}window.location.replace("https://globalenglishacademyonline.co.za/");}catch{setEnding(false);setError("We could not confirm both participants have exited. Please try End Class again.");}};
 
  const startGame=(g:any)=>{if(!teacher)return;setGame(g);setInteractive(true);setScore(0);setReward("");setSortDrag("");setOrderPick([]);setShowGames(false);broadcast({game:g,interactive:true,score:0,reward:""});};
  const answer=(item:string)=>{if(!student||!interactive||!game)return;let ok=false;if(game.id==="pick")ok=item===game.answer;if(game.id==="sort"){const parts=item.split("|");const land=parts[0].includes("Dog")||parts[0].includes("Cat");const water=parts[0].includes("Fish")||parts[0].includes("Shark");ok=(land&&parts[1]==="Land")||(water&&parts[1]==="Water");}if(game.id==="order"){const nextOrder=orderPick.concat([item]);setOrderPick(nextOrder);ok=nextOrder.join("|")===game.items.join("|");if(!ok&&nextOrder.length>=game.items.length){setOrderPick([]);setReward("Try the order again!");return;}}const next=ok?score+1:score;setScore(next);setReward(ok?"⭐ Great job!":"Try again!");signal({type:"state",interactive,game,score:next,reward:ok?"⭐ Great job!":"Try again!",positions});};
@@ -211,7 +140,7 @@ export default function Classroom(){
    const up=()=>{window.removeEventListener("pointermove",move);window.removeEventListener("pointerup",up);if(teacher)broadcast();};
    window.addEventListener("pointermove",move);window.addEventListener("pointerup",up,{once:true});
  };
- const setLayout=(mode:string)=>{const p=mode==="roleplay"?{teacher:{x:76,y:0,w:22},student:{x:76,y:26,w:22}}:mode==="side"?{teacher:{x:76,y:0,w:22},student:{x:76,y:26,w:22}}:{teacher:{x:76,y:0,w:22},student:{x:76,y:26,w:22}};setPositions(p);if(teacher)broadcast({positions:p});setShowLayout(false);};
+ const setLayout=(mode:string)=>{const p=mode==="roleplay"?{teacher:{x:4,y:62,w:27},student:{x:69,y:62,w:27}}:mode==="side"?{teacher:{x:3,y:3,w:21},student:{x:27,y:3,w:21}}:{teacher:{x:2,y:2,w:24},student:{x:74,y:2,w:24}};setPositions(p);if(teacher)broadcast({positions:p});setShowLayout(false);};
  const giveReward=async(type:string)=>{if(!lesson||rewards.length>=15)return;const r=await fetch("/api/rewards",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:lesson.id,rewardType:type})});const j=await r.json();if(r.ok)setRewards(v=>v.concat([j]));};
  const time=String(Math.floor(recordTime/60)).padStart(2,"0")+":"+String(recordTime%60).padStart(2,"0");
  const material=materials[0];
@@ -235,17 +164,17 @@ export default function Classroom(){
   <div className="gc-body">
    <section className="gc-main">
     <div className="gc-stage">
-     {!isBrightLesson&&<div className="gc-lessonbar"><strong>{lesson.topic||"English Lesson"}</strong><span>{interactive?"🟢 Interactive Mode ON":"Teaching Mode"} {recording?" • 🔴 Recording":""}</span></div>}
-      <div className="gc-material" style={{position:"relative",width:"100%",height:"100%",minHeight:420,overflow:"hidden",background:"#fff"}}>{material?.url&&/^https:\/\/(www\.)?englishbrightesl\.com\//i.test(material.url)?<iframe key={material.id} src={material.url} title={"English Bright ESL — "+material.title} allow="autoplay; fullscreen; clipboard-read; clipboard-write" allowFullScreen style={{position:"absolute",inset:0,width:"100%",height:"100%",border:0,background:"#fff"}}/>:<div className="gc-placeholder"><div>📚</div><h2>{lesson.topic||"Let's learn English!"}</h2><p>{material?.title||"No English Bright URL is assigned to this lesson yet."}</p>{material?.url&&<a href={material.url} target="_blank" rel="noreferrer">Open assigned lesson in a new tab</a>}</div>}</div>
+     <div className="gc-lessonbar"><strong>{lesson.topic||"English Lesson"}</strong><span>{interactive?"🟢 Interactive Mode ON":"Teaching Mode"} {recording?" • 🔴 Recording":""}</span></div>
+     <div className="gc-material">{isBrightLesson&&material?.url?<iframe key={material.id} src={material.url} title={"English Bright ESL — "+material.title} allow="autoplay; fullscreen; clipboard-read; clipboard-write" allowFullScreen style={{position:"absolute",inset:0,width:"100%",height:"100%",border:0,background:"#fff"}}/>:<div className="gc-placeholder"><div>📚</div><h2>{lesson.topic||"Let's learn English!"}</h2><p>{teacher?(material?.title||"No workbook assigned to this class."):"Your teacher controls the lesson materials."}</p></div>}</div>
      <div className="gc-video" style={{left:positions.teacher.x+"%",top:(positions.teacher.y+5)+"%",width:positions.teacher.w+"%"}} onPointerDown={e=>moveVideo("teacher",e)}><video ref={teacher?localVideo:remoteVideo} autoPlay playsInline muted={teacher}/><div className="gc-video-label">👩‍🏫 {lesson.teacher_name}</div></div>
      <div className="gc-video" style={{left:positions.student.x+"%",top:(positions.student.y+5)+"%",width:positions.student.w+"%"}} onPointerDown={e=>moveVideo("student",e)}><video ref={teacher?remoteVideo:localVideo} autoPlay playsInline muted={student}/><div className="gc-video-label">🧒 {lesson.student_name}</div></div>
-     {!isBrightLesson&&game&&interactive&&<div className="gc-game-overlay"><div className="gc-game-card"><h2>{game.title}</h2><p>{game.prompt}</p><div className="gc-game-grid">{game.id==="sort"?<><div className="gc-dragzone">{game.items.map((x:string)=><button className="gc-game-item" draggable={student} key={x} onDragStart={()=>setSortDrag(x)} onClick={()=>setSortDrag(x)}>{x}</button>)}</div><div className="gc-sort-targets"><div className="gc-sort-target" onDragOver={e=>e.preventDefault()} onDrop={()=>{if(sortDrag){answer(sortDrag+"|Land");setSortDrag("");}}}>LAND</div><div className="gc-sort-target" onDragOver={e=>e.preventDefault()} onDrop={()=>{if(sortDrag){answer(sortDrag+"|Water");setSortDrag("");}}}>WATER</div></div></>:game.id==="order"?<div className="gc-game-grid">{game.items.map((x:string)=><button className="gc-game-item" key={x} disabled={!student||orderPick.includes(x)} onClick={()=>answer(x)}>{x}</button>)}</div>:<div className="gc-game-grid">{game.items.map((x:string)=><button className="gc-game-item" key={x} disabled={!student} onClick={()=>answer(x)}>{x}</button>)}</div>}</div>{reward&&<div className="gc-reward">{reward} {score?"Score: "+score:""}</div>}{teacher&&<button className="gc-close-activity" onClick={()=>{setInteractive(false);setGame(null);setReward("");broadcast({interactive:false,game:null,reward:""});}}>Close Activity</button>}</div></div>}
-     {!isBrightLesson&&teacher&&<div className="gc-stage-hint">Drag teacher/student cameras to reposition them during role-play.</div>}
+     {game&&interactive&&<div className="gc-game-overlay"><div className="gc-game-card"><h2>{game.title}</h2><p>{game.prompt}</p><div className="gc-game-grid">{game.id==="sort"?<><div className="gc-dragzone">{game.items.map((x:string)=><button className="gc-game-item" draggable={student} key={x} onDragStart={()=>setSortDrag(x)} onClick={()=>setSortDrag(x)}>{x}</button>)}</div><div className="gc-sort-targets"><div className="gc-sort-target" onDragOver={e=>e.preventDefault()} onDrop={()=>{if(sortDrag){answer(sortDrag+"|Land");setSortDrag("");}}}>LAND</div><div className="gc-sort-target" onDragOver={e=>e.preventDefault()} onDrop={()=>{if(sortDrag){answer(sortDrag+"|Water");setSortDrag("");}}}>WATER</div></div></>:game.id==="order"?<div className="gc-game-grid">{game.items.map((x:string)=><button className="gc-game-item" key={x} disabled={!student||orderPick.includes(x)} onClick={()=>answer(x)}>{x}</button>)}</div>:<div className="gc-game-grid">{game.items.map((x:string)=><button className="gc-game-item" key={x} disabled={!student} onClick={()=>answer(x)}>{x}</button>)}</div>}</div>{reward&&<div className="gc-reward">{reward} {score?"Score: "+score:""}</div>}{teacher&&<button className="gc-close-activity" onClick={()=>{setInteractive(false);setGame(null);setReward("");broadcast({interactive:false,game:null,reward:""});}}>Close Activity</button>}</div></div>}
+     {teacher&&<div className="gc-stage-hint">Drag teacher/student cameras to reposition them during role-play.</div>}
     </div>
-    {!isBrightLesson&&<div className="gc-tools">{teacher?<><button onClick={()=>setShowGames(true)}>🎮 Games</button><button className={interactive?"active":""} onClick={()=>{const n=!interactive;setInteractive(n);setReward("");broadcast({interactive:n});}}>🎯 {interactive?"Student Controls ON":"Student Controls OFF"}</button><button onClick={()=>setShowLayout(true)}>🎭 Move Cameras</button><span className="tool-spacer"></span><button>‹</button><span className="page-count">Page 1</span><button>›</button></>:student?<><strong>Student Tools</strong><span>{interactive&&game?"Activity ready — click or drag the answers on screen.":"Your teacher will open activities here."}</span><span className="tool-spacer"></span><button type="button" onClick={()=>{signal({type:"student_ready"});setStatus("You let your teacher know you are ready");}}>🙋 I’m Ready</button></>:<span>Admin monitoring mode</span>}</div>
+    <div className="gc-tools">{teacher?<><button onClick={()=>setShowGames(true)}>🎮 Games</button><button className={interactive?"active":""} onClick={()=>{const n=!interactive;setInteractive(n);setReward("");broadcast({interactive:n});}}>🎯 {interactive?"Student Controls ON":"Student Controls OFF"}</button><button onClick={()=>setShowLayout(true)}>🎭 Move Cameras</button><span className="tool-spacer"></span><button>‹</button><span className="page-count">Page 1</span><button>›</button></>:student?<><strong>Student Tools</strong><span>{interactive&&game?"Activity ready — click or drag the answers on screen.":"Your teacher will open activities here."}</span><span className="tool-spacer"></span><button type="button" onClick={()=>{signal({type:"student_ready"});setStatus("You let your teacher know you are ready");}}>🙋 I’m Ready</button></>:<span>Admin monitoring mode</span>}</div>
    </section>
 
-   {!isBrightLesson&&<aside className="gc-right">
+   <aside className="gc-right">
     <div className="gc-right-head"><strong>Classroom Controls</strong><span>51Talk-inspired 1-to-1 interactive teaching</span></div>
     {teacher?<div className="gc-panel"><h3>Student Interaction</h3><div className="gc-control-row"><button className={interactive?"active":""} onClick={()=>{const n=!interactive;setInteractive(n);setReward("");broadcast({interactive:n});}}>{interactive?"🟢 Student Controls ON":"⚪ Student Controls OFF"}</button><button onClick={()=>setShowGames(true)}>🎮 Games</button></div></div>:student?<div className="gc-panel"><h3>Student Tools</h3><p>{interactive&&game?"Your activity is ready. Select an answer or drag an item on the lesson screen.":"Your teacher will start an interactive activity when it is time to play."}</p><button type="button" onClick={()=>{signal({type:"student_ready"});setStatus("You let your teacher know you are ready");}}>🙋 I’m Ready</button></div>:null}
     <div className="gc-panel"><h3>Lesson</h3><strong>{lesson.topic||"English Lesson"}</strong><p>{lesson.student_name} • {lesson.student_level||"English"}{lesson.student_age?" • Age "+lesson.student_age:""}</p></div>
@@ -258,6 +187,6 @@ export default function Classroom(){
 
   {showLayout&&<div className="gc-modal-backdrop" onClick={()=>setShowLayout(false)}><div className="gc-modal" onClick={e=>e.stopPropagation()}><div className="gc-modal-head"><h2>Role-play Camera Layout</h2><button onClick={()=>setShowLayout(false)}>Close</button></div><p>Use a preset or drag the camera windows directly on the lesson stage.</p><div className="gc-layout-buttons"><button onClick={()=>setLayout("normal")}>Normal Corners</button><button onClick={()=>setLayout("roleplay")}>Role Play</button><button onClick={()=>setLayout("side")}>Side by Side</button></div></div></div>}
 
-  {!isBrightLesson&&teacher&&openMaterial&&<div className="gc-modal-backdrop" onContextMenu={e=>e.preventDefault()}><div className="gc-material-modal"><div className="gc-modal-head"><h2>📄 {openMaterial.title}</h2><button onClick={()=>setOpenMaterial(null)}>Close</button></div><div className="gc-material-frame"><PdfViewer src={"/api/lesson-materials/file?lessonId="+encodeURIComponent(lesson.id)+"&materialId="+encodeURIComponent(openMaterial.id)} title={openMaterial.title}/></div><p>View-only classroom material.</p></div></div>}
+  {teacher&&openMaterial&&<div className="gc-modal-backdrop" onContextMenu={e=>e.preventDefault()}><div className="gc-material-modal"><div className="gc-modal-head"><h2>📄 {openMaterial.title}</h2><button onClick={()=>setOpenMaterial(null)}>Close</button></div><div className="gc-material-frame"><PdfViewer src={"/api/lesson-materials/file?lessonId="+encodeURIComponent(lesson.id)+"&materialId="+encodeURIComponent(openMaterial.id)} title={openMaterial.title}/></div><p>View-only classroom material.</p></div></div>}
  </main>;
 }
