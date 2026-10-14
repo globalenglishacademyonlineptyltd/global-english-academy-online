@@ -20,7 +20,7 @@ export default function Classroom(){
  const [materials,setMaterials]=useState<any[]>([]),[rewards,setRewards]=useState<any[]>([]);
  const [interactive,setInteractive]=useState(false),[game,setGame]=useState<any>(null),[score,setScore]=useState(0),[reward,setReward]=useState(""),[sortDrag,setSortDrag]=useState(""),[orderPick,setOrderPick]=useState<string[]>([]);
  const [connected,setConnected]=useState(false),[muted,setMuted]=useState(false),[camera,setCamera]=useState(true),[recording,setRecording]=useState(false),[recordTime,setRecordTime]=useState(0);
- const [showGames,setShowGames]=useState(false),[showLayout,setShowLayout]=useState(false),[openMaterial,setOpenMaterial]=useState<any>(null),[positions,setPositions]=useState<any>({teacher:{x:2,y:2,w:24},student:{x:74,y:2,w:24}});
+ const [showGames,setShowGames]=useState(false),[showLayout,setShowLayout]=useState(false),[openMaterial,setOpenMaterial]=useState<any>(null),[positions,setPositions]=useState<any>({teacher:{x:76,y:0,w:22},student:{x:76,y:26,w:22}});
  const [loading,setLoading]=useState(true),[error,setError]=useState(""),[status,setStatus]=useState("Starting classroom…"),[ending,setEnding]=useState(false);
 
  const localVideo=useRef<HTMLVideoElement|null>(null),remoteVideo=useRef<HTMLVideoElement|null>(null),localStream=useRef<MediaStream|null>(null),remoteStream=useRef<MediaStream|null>(null),peer=useRef<RTCPeerConnection|null>(null),after=useRef("1970-01-01T00:00:00.000Z"),seen=useRef<Set<string>>(new Set()),poller=useRef<any>(null),recorder=useRef<MediaRecorder|null>(null),recordChunks=useRef<Blob[]>([]),recordStarted=useRef<number>(0),canvas=useRef<HTMLCanvasElement|null>(null);
@@ -82,12 +82,12 @@ export default function Classroom(){
        }
        setLesson(found);
        const b=await fetch("/api/branding",{cache:"no-store"}).then(x=>x.ok?x.json():null).catch(()=>null);setBranding(b);
-       if(meRes.user.role==="TEACHER"||meRes.user.role==="ADMIN"){const mm=await fetch("/api/lesson-materials?lessonId="+encodeURIComponent(found.id),{cache:"no-store"});if(mm.ok){const assigned=await mm.json();setMaterials(assigned);if(meRes.user.role==="TEACHER"&&assigned?.[0])setOpenMaterial(assigned[0]);}}
+       if(meRes.user.role==="TEACHER"||meRes.user.role==="ADMIN"||meRes.user.role==="STUDENT"){const mm=await fetch("/api/lesson-materials?lessonId="+encodeURIComponent(found.id),{cache:"no-store"});if(mm.ok){const assigned=await mm.json();setMaterials(assigned);if(assigned?.[0])setOpenMaterial(assigned[0]);}}
        const rr=await fetch("/api/rewards?lessonId="+encodeURIComponent(found.id),{cache:"no-store"});if(rr.ok)setRewards(await rr.json());
        if(meRes.user.role==="ADMIN"){setLesson(found);setStatus("Admin monitoring mode — camera and microphone are off");setLoading(false);signal({type:"hello"});return;}const stream=await navigator.mediaDevices.getUserMedia({video:true,audio:true});if(!alive)return;
        localStream.current=stream;if(localVideo.current)localVideo.current.srcObject=stream;
        createPeer();setStatus("Connected — classroom ready");signal({type:"hello"});setLoading(false);
-       setTimeout(()=>startRecording(),400);
+       if(meRes.user.role==="TEACHER")setTimeout(()=>startRecording(),400);
      }catch(e){console.error("Classroom media startup failed",e);setStatus("Camera/microphone unavailable — check browser permissions and device access");setLoading(false);}
    }
    start();poll();poller.current=setInterval(poll,700);
@@ -138,7 +138,7 @@ export default function Classroom(){
    const up=()=>{window.removeEventListener("pointermove",move);window.removeEventListener("pointerup",up);if(teacher)broadcast();};
    window.addEventListener("pointermove",move);window.addEventListener("pointerup",up,{once:true});
  };
- const setLayout=(mode:string)=>{const p=mode==="roleplay"?{teacher:{x:4,y:62,w:27},student:{x:69,y:62,w:27}}:mode==="side"?{teacher:{x:3,y:3,w:21},student:{x:27,y:3,w:21}}:{teacher:{x:2,y:2,w:24},student:{x:74,y:2,w:24}};setPositions(p);if(teacher)broadcast({positions:p});setShowLayout(false);};
+ const setLayout=(mode:string)=>{const p=mode==="roleplay"?{teacher:{x:76,y:0,w:22},student:{x:76,y:26,w:22}}:mode==="side"?{teacher:{x:76,y:0,w:22},student:{x:76,y:26,w:22}}:{teacher:{x:76,y:0,w:22},student:{x:76,y:26,w:22}};setPositions(p);if(teacher)broadcast({positions:p});setShowLayout(false);};
  const giveReward=async(type:string)=>{if(!lesson||rewards.length>=15)return;const r=await fetch("/api/rewards",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:lesson.id,rewardType:type})});const j=await r.json();if(r.ok)setRewards(v=>v.concat([j]));};
  const time=String(Math.floor(recordTime/60)).padStart(2,"0")+":"+String(recordTime%60).padStart(2,"0");
  const material=materials[0];
@@ -162,7 +162,7 @@ export default function Classroom(){
    <section className="gc-main">
     <div className="gc-stage">
      <div className="gc-lessonbar"><strong>{lesson.topic||"English Lesson"}</strong><span>{interactive?"🟢 Interactive Mode ON":"Teaching Mode"} {recording?" • 🔴 Recording":""}</span></div>
-     <div className="gc-material"><div className="gc-placeholder"><div>📚</div><h2>{lesson.topic||"Let's learn English!"}</h2><p>{teacher?(material?.title||"No workbook assigned to this class."):"Your teacher controls the lesson materials."}</p></div></div>
+     <div className="gc-material" style={{position:"relative",width:"100%",height:"100%",minHeight:420,overflow:"hidden",background:"#fff"}}>{material?.url&&/^https:\/\/(www\.)?englishbrightesl\.com\//i.test(material.url)?<iframe key={material.id} src={material.url} title={"English Bright ESL — "+material.title} allow="autoplay; fullscreen; clipboard-read; clipboard-write" allowFullScreen style={{position:"absolute",inset:0,width:"100%",height:"100%",border:0,background:"#fff"}}/>:<div className="gc-placeholder"><div>📚</div><h2>{lesson.topic||"Let's learn English!"}</h2><p>{material?.title||"No English Bright URL is assigned to this lesson yet."}</p>{material?.url&&<a href={material.url} target="_blank" rel="noreferrer">Open assigned lesson in a new tab</a>}</div>}</div>
      <div className="gc-video" style={{left:positions.teacher.x+"%",top:(positions.teacher.y+5)+"%",width:positions.teacher.w+"%"}} onPointerDown={e=>moveVideo("teacher",e)}><video ref={teacher?localVideo:remoteVideo} autoPlay playsInline muted={teacher}/><div className="gc-video-label">👩‍🏫 {lesson.teacher_name}</div></div>
      <div className="gc-video" style={{left:positions.student.x+"%",top:(positions.student.y+5)+"%",width:positions.student.w+"%"}} onPointerDown={e=>moveVideo("student",e)}><video ref={teacher?remoteVideo:localVideo} autoPlay playsInline muted={student}/><div className="gc-video-label">🧒 {lesson.student_name}</div></div>
      {game&&interactive&&<div className="gc-game-overlay"><div className="gc-game-card"><h2>{game.title}</h2><p>{game.prompt}</p><div className="gc-game-grid">{game.id==="sort"?<><div className="gc-dragzone">{game.items.map((x:string)=><button className="gc-game-item" draggable={student} key={x} onDragStart={()=>setSortDrag(x)} onClick={()=>setSortDrag(x)}>{x}</button>)}</div><div className="gc-sort-targets"><div className="gc-sort-target" onDragOver={e=>e.preventDefault()} onDrop={()=>{if(sortDrag){answer(sortDrag+"|Land");setSortDrag("");}}}>LAND</div><div className="gc-sort-target" onDragOver={e=>e.preventDefault()} onDrop={()=>{if(sortDrag){answer(sortDrag+"|Water");setSortDrag("");}}}>WATER</div></div></>:game.id==="order"?<div className="gc-game-grid">{game.items.map((x:string)=><button className="gc-game-item" key={x} disabled={!student||orderPick.includes(x)} onClick={()=>answer(x)}>{x}</button>)}</div>:<div className="gc-game-grid">{game.items.map((x:string)=><button className="gc-game-item" key={x} disabled={!student} onClick={()=>answer(x)}>{x}</button>)}</div>}</div>{reward&&<div className="gc-reward">{reward} {score?"Score: "+score:""}</div>}{teacher&&<button className="gc-close-activity" onClick={()=>{setInteractive(false);setGame(null);setReward("");broadcast({interactive:false,game:null,reward:""});}}>Close Activity</button>}</div></div>}
