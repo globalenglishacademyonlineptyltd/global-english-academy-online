@@ -87,7 +87,6 @@ export default function Classroom(){
        if(meRes.user.role==="ADMIN"){setLesson(found);setStatus("Admin monitoring mode — camera and microphone are off");setLoading(false);signal({type:"hello"});return;}const stream=await navigator.mediaDevices.getUserMedia({video:true,audio:true});if(!alive)return;
        localStream.current=stream;if(localVideo.current)localVideo.current.srcObject=stream;
        createPeer();setStatus("Connected — classroom ready");signal({type:"hello"});setLoading(false);
-       setTimeout(()=>startRecording(),400);
      }catch(e){console.error("Classroom media startup failed",e);setStatus("Camera/microphone unavailable — check browser permissions and device access");setLoading(false);}
    }
    start();poll();poller.current=setInterval(poll,700);
@@ -124,6 +123,9 @@ export default function Classroom(){
  };
 
  const stopRecording=()=>{if(recorder.current)recorder.current.stop();recorder.current=null;recordStarted.current=0;setRecording(false);};
+
+ // Start recording automatically after the classroom and participant media are ready.
+ useEffect(()=>{if(loading||!lesson||!me||me.role==="ADMIN"||recording||!localStream.current)return;const id=setTimeout(()=>startRecording(),400);return()=>clearTimeout(id);},[loading,lesson,me,recording]);
 
  const endClass=async()=>{if(me?.role==="ADMIN"||!lesson)return;if(ending)return;setEnding(true);if(recording)stopRecording();try{await fetch("/api/classroom-complete",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:lesson.id})});const exit=await fetch("/api/classroom-exit",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:lesson.id})});if(!exit.ok)throw new Error("Could not register classroom exit.");let state=await exit.json();while(!state.bothExited){await new Promise(resolve=>setTimeout(resolve,1500));const check=await fetch("/api/classroom-exit?lessonId="+encodeURIComponent(lesson.id),{cache:"no-store"});if(!check.ok)throw new Error("Could not check classroom exit status.");state=await check.json();}window.location.replace("https://globalenglishacademyonline.co.za/");}catch{setEnding(false);setError("We could not confirm both participants have exited. Please try End Class again.");}};
 
