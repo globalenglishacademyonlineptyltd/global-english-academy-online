@@ -1,5 +1,6 @@
 "use client";
 import {useEffect,useState} from "react";
+import RecordingPlayer from "../_components/RecordingPlayer";
 export default function TeacherScoresAdmin(){
   const [teachers,setTeachers]=useState<any[]>([]);
   const [selected,setSelected]=useState<any|null>(null);
@@ -83,7 +84,7 @@ export default function TeacherScoresAdmin(){
     {recording&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.65)",display:"flex",alignItems:"center",justifyContent:"center",padding:20,zIndex:1000}} onClick={()=>setRecording(null)}>
       <div className="card" style={{width:"min(1000px,95vw)",maxHeight:"90vh",overflow:"auto"}} onClick={e=>e.stopPropagation()}>
         <div className="topbar" style={{marginBottom:16}}><div><h2 style={{margin:0}}>Class Recording</h2><div className="muted">{recording.class_id||"Class"} · {recording.student_name} · {selected.full_name}</div></div><button onClick={()=>setRecording(null)}>Close</button></div>
-        <video controls autoPlay style={{width:"100%",maxHeight:"70vh"}} src={recording.recording_url}/>
+        <RecordingPlayer src={recording.recording_url} title="Class Recording"/>
       </div>
     </div>}
   </main>;
