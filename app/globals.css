@@ -218,7 +218,7 @@ body{background:#f5f8fc}
 .lesson-history-stars button.rated{color:#facc15}
 .session-rating{margin-top:16px;text-align:center;font-size:12px;color:#475569}
 .session-rating button{border:0;background:transparent;padding:1px;cursor:pointer;font-size:26px;color:#cbd5e1}
-.session-rating button:hover{color:#facc15}
+.session-rating button:hover{color:#facc15}.session-rating button.rated{color:#facc15}
 
 /* Shared portal menu: available on every authenticated dashboard page. */
 .global-portal-menu-wrap{position:fixed;left:20px;top:18px;z-index:5000}
