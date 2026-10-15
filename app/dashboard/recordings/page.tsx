@@ -1,5 +1,6 @@
 "use client";
 import{useEffect,useMemo,useState}from"react";
+import RecordingPlayer from "../_components/RecordingPlayer";
 
 export default function Recordings(){
  const[rows,setRows]=useState<any[]>([]);
@@ -9,6 +10,7 @@ export default function Recordings(){
  const[end,setEnd]=useState("");
  const[filtered,setFiltered]=useState<any[]>([]);
  const[submitted,setSubmitted]=useState(false);
+ const[recording,setRecording]=useState<any|null>(null);
 
  useEffect(()=>{
   fetch("/api/recordings").then(r=>r.ok?r.json():[]).then((data)=>{
@@ -52,7 +54,8 @@ export default function Recordings(){
   </div>
   {rows.length===0?<div className="card section">No recordings have been stored yet.</div>:filtered.length===0?<div className="card section">No recordings match the selected filters.</div>:<div className="section">
    <table className="table"><thead><tr><th>Date</th><th>Teacher</th><th>Student</th><th>Duration</th><th>Recording</th></tr></thead>
-   <tbody>{filtered.map(r=><tr key={r.id}><td>{new Date(r.starts_at).toLocaleString()}</td><td>{r.teacher_name}</td><td>{r.student_name}</td><td>{Math.floor((r.duration_seconds||0)/60)}:{String((r.duration_seconds||0)%60).padStart(2,"0")}</td><td><a href={r.storage_url} target="_blank" rel="noreferrer">Open recording</a></td></tr>)}</tbody></table>
+   <tbody>{filtered.map(r=><tr key={r.id}><td>{new Date(r.starts_at).toLocaleString()}</td><td>{r.teacher_name}</td><td>{r.student_name}</td><td>{Math.floor((r.duration_seconds||0)/60)}:{String((r.duration_seconds||0)%60).padStart(2,"0")}</td><td><button type="button" className="primary" onClick={()=>setRecording(r)}>View recording</button></td></tr>)}</tbody></table>
   </div>}
+  {recording&&<div style={{position:"fixed",inset:0,zIndex:1100,background:"rgba(15,23,42,.9)",display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setRecording(null)}><div className="card" style={{width:"min(1100px,100%)",maxHeight:"90vh",overflow:"auto"}} onClick={e=>e.stopPropagation()}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}><div><h2 style={{margin:"0 0 4px"}}>Class Recording</h2><p className="muted">{recording.teacher_name} · {recording.student_name} · {new Date(recording.starts_at).toLocaleString()}</p></div><button type="button" onClick={()=>setRecording(null)}>Close</button></div><RecordingPlayer src={recording.storage_url} title="Class Recording"/></div></div>}
  </main>
 }
