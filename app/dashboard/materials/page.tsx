@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import PdfViewer from "@/app/components/PdfViewer";
 
 const folders = [
@@ -16,6 +16,8 @@ const folders = [
   "Flashcards",
   "Cultural Celebrations"
 ];
+const levelFolders = folders.slice(0, 7);
+const units = Array.from({ length: 12 }, (_, i) => i + 1);
 
 export default function Materials() {
   const [rows, setRows] = useState<any[]>([]);
@@ -24,207 +26,124 @@ export default function Materials() {
   const [description, setDescription] = useState("");
   const [url, setUrl] = useState("");
   const [folder, setFolder] = useState(folders[0]);
+  const [unitNo, setUnitNo] = useState("");
   const [sequenceNo, setSequenceNo] = useState("1");
   const [file, setFile] = useState<File | null>(null);
   const [message, setMessage] = useState("");
   const [openMaterial, setOpenMaterial] = useState<any>(null);
   const [editingMaterialId, setEditingMaterialId] = useState<string | null>(null);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [expandedUnits, setExpandedUnits] = useState<Set<string>>(new Set());
 
   async function load() {
     const me = await fetch("/api/me").then(r => r.json());
     const currentRole = me.user?.role || "";
     setRole(currentRole);
-    if (currentRole !== "ADMIN") {
-      window.location.replace("/dashboard");
-      return;
-    }
+    if (currentRole !== "ADMIN") { window.location.replace("/dashboard"); return; }
     const x = await fetch("/api/materials", { cache: "no-store" });
     if (x.ok) setRows(await x.json());
   }
-
   useEffect(() => { load(); }, []);
 
+  const groups = useMemo(() => rows.reduce((a, m) => {
+    const k = m.folder || m.level || "Uncategorised";
+    (a[k] ??= []).push(m);
+    return a;
+  }, {} as Record<string, any[]>), [rows]);
+
   function startEdit(material: any) {
-    setEditingMaterialId(material.id);
-    setTitle(material.title || "");
-    setDescription(material.description || "");
-    setUrl(material.url || "");
+    setEditingMaterialId(material.id); setTitle(material.title || ""); setDescription(material.description || ""); setUrl(material.url || "");
     setFolder(folders.includes(material.folder || material.level) ? (material.folder || material.level) : folders[0]);
-    setSequenceNo(String(material.sequence_no || 1));
-    setFile(null);
-    setMessage("Editing material. Upload a new file only if you want to replace the existing workbook.");
+    setUnitNo(material.unit_no ? String(material.unit_no) : ""); setSequenceNo(String(material.sequence_no || 1)); setFile(null);
+    setMessage("Editing lesson. Change the Level or Unit and save. Leave the file empty to keep the current file.");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
+  function cancelEdit() { setEditingMaterialId(null); setTitle(""); setDescription(""); setUrl(""); setFolder(folders[0]); setUnitNo(""); setSequenceNo("1"); setFile(null); setMessage("Edit cancelled."); }
 
-  function cancelEdit() {
-    setEditingMaterialId(null);
-    setTitle("");
-    setDescription("");
-    setUrl("");
-    setFolder(folders[0]);
-    setSequenceNo("1");
-    setFile(null);
-    setMessage("Edit cancelled.");
-  }
-
-  async function add() {
+  async function save() {
     setMessage("Saving…");
-    if (!title.trim()) {
-      setMessage("Lesson title is required.");
-      return;
-    }
+    if (!title.trim()) { setMessage("Lesson title is required."); return; }
+    if (levelFolders.includes(folder) && !unitNo) { setMessage("Please choose the Unit for this Level lesson."); return; }
     try {
       let contentData = "", mimeType = "";
       if (file) {
         mimeType = file.type || "application/octet-stream";
+        const form = new FormData(); form.append("file", file);
         setMessage("Uploading workbook to secure file storage…");
-        const form = new FormData();
-        form.append("file", file);
-        const uploadResponse = await fetch("/api/materials/upload", {
-          method: "POST",
-          body: form
-        });
+        const uploadResponse = await fetch("/api/materials/upload", { method: "POST", body: form });
         const uploaded = await uploadResponse.json().catch(() => ({}));
-        if (!uploadResponse.ok || !uploaded.storageKey) {
-          throw new Error(uploaded.error || "The workbook could not be uploaded. Please try again.");
-        }
+        if (!uploadResponse.ok || !uploaded.storageKey) throw new Error(uploaded.error || "The workbook could not be uploaded. Please try again.");
         contentData = uploaded.storageKey;
-        setMessage("Workbook uploaded. Saving lesson details…");
       }
-      const x = await fetch("/api/materials", {
-        method: editingMaterialId ? "PATCH" : "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ materialId: editingMaterialId, title, description, url, folder, level: folder, sequenceNo, contentData, mimeType })
-      });
-      const j = await x.json();
-      if (!x.ok) throw new Error(j.error || "Could not save material.");
-      setEditingMaterialId(null);
-      setTitle("");
-      setDescription("");
-      setUrl("");
-      setFolder(folders[0]);
-      setSequenceNo(String(Number(sequenceNo) + 1));
-      setFile(null);
+      const x = await fetch("/api/materials", { method: editingMaterialId ? "PATCH" : "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ materialId: editingMaterialId, title, description, url, folder, level: folder, unitNo: unitNo || null, sequenceNo, contentData, mimeType }) });
+      const j = await x.json(); if (!x.ok) throw new Error(j.error || "Could not save material.");
+      const savedFolder = folder, savedUnit = unitNo;
+      setEditingMaterialId(null); setTitle(""); setDescription(""); setUrl(""); setFolder(folders[0]); setUnitNo(""); setSequenceNo(String(Number(sequenceNo) + 1)); setFile(null);
       setMessage(editingMaterialId ? "Material updated." : "Material saved.");
-      setExpandedFolders(previous => new Set(previous).add(folder));
+      setExpandedFolders(p => new Set(p).add(savedFolder)); if (savedUnit) setExpandedUnits(p => new Set(p).add(savedFolder + "::" + savedUnit));
       await load();
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not save material.");
-    }
-  }
-
-  function toggleFolder(name: string) {
-    setExpandedFolders(previous => {
-      const next = new Set(previous);
-      if (next.has(name)) next.delete(name);
-      else next.add(name);
-      return next;
-    });
+    } catch (e) { setMessage(e instanceof Error ? e.message : "Could not save material."); }
   }
 
   async function deleteMaterial(material: any) {
-    const confirmed = window.confirm(
-      'Permanently delete "' + material.title + '"? This cannot be undone. The uploaded file and its lesson-material assignments will also be deleted.'
-    );
-    if (!confirmed) return;
-
+    if (!window.confirm('Permanently delete "' + material.title + '"? This cannot be undone.')) return;
     setMessage("Deleting material…");
-    const response = await fetch("/api/materials", {
-      method: "DELETE",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ materialId: material.id })
-    });
+    const response = await fetch("/api/materials", { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ materialId: material.id }) });
     const result = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      setMessage(result.error || "Could not delete material.");
-      return;
-    }
-    setRows(previous => previous.filter(item => item.id !== material.id));
-    if (openMaterial?.id === material.id) setOpenMaterial(null);
-    setMessage('"' + material.title + '" was permanently deleted.');
+    if (!response.ok) { setMessage(result.error || "Could not delete material."); return; }
+    setRows(p => p.filter(item => item.id !== material.id)); if (openMaterial?.id === material.id) setOpenMaterial(null); setMessage('"' + material.title + '" was permanently deleted.');
   }
 
-  const groups = rows.reduce((a, m) => {
-    const k = m.folder || m.level || "Uncategorised";
-    (a[k] ??= []).push(m);
-    return a;
-  }, {} as Record<string, any[]>);
-  const ordered = [...folders, "Uncategorised"].filter(k => groups[k]);
+  function toggle(setter: React.Dispatch<React.SetStateAction<Set<string>>>, key: string) { setter(previous => { const next = new Set(previous); if (next.has(key)) next.delete(key); else next.add(key); return next; }); }
 
   if (role && role !== "ADMIN") return null;
-
-  return (
-    <main className="main">
-      <div className="topbar">
-        <div>
-          <h1>Lesson Materials</h1>
-          <p className="muted">Organise your teaching materials by level and resource type.</p>
-        </div>
+  return <main className="main">
+    <div className="topbar"><div><h1>Lesson Materials</h1><p className="muted">Your existing folders stay exactly as they are. Level folders contain Unit 1–12 subfolders.</p></div></div>
+    {role === "ADMIN" && <div className="card">
+      <div className="card-head"><h3>{editingMaterialId ? "Edit Lesson Material" : "Add Lesson Material"}</h3><span className="badge">Admin only</span></div>
+      <div className="form-grid">
+        <input className="input" placeholder="Lesson title" value={title} onChange={e => setTitle(e.target.value)} />
+        <select className="input" value={folder} onChange={e => { setFolder(e.target.value); setUnitNo(""); }}>{folders.map(x => <option key={x}>{x}</option>)}</select>
+        {levelFolders.includes(folder) && <select className="input" value={unitNo} onChange={e => setUnitNo(e.target.value)}><option value="">Choose Unit</option>{units.map(n => <option key={n} value={n}>Unit {n}</option>)}</select>}
+        <input className="input" placeholder="Lesson number / sequence" type="number" min="1" value={sequenceNo} onChange={e => setSequenceNo(e.target.value)} />
+        <input className="input" placeholder="Short description" value={description} onChange={e => setDescription(e.target.value)} />
       </div>
+      <label className="input file-input">{editingMaterialId ? "Replace workbook (optional)" : "Upload PDF / lesson file"}<input type="file" accept=".pdf,.png,.jpg,.jpeg,.webp" onChange={e => setFile(e.target.files?.[0] || null)} /></label>
+      {editingMaterialId && <p className="muted small">The existing lesson stays in the system. You are only changing its organization/details.</p>}
+      <input className="input" placeholder="Optional external URL" value={url} onChange={e => setUrl(e.target.value)} />
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><button className="primary compact-btn" onClick={save}>{editingMaterialId ? "Save Changes" : "Save material"}</button>{editingMaterialId && <button type="button" className="secondary compact-btn" onClick={cancelEdit}>Cancel Edit</button>}</div>
+      {message && <div className="muted small" role="status" style={{ marginTop: 10 }}>{message}</div>}
+    </div>}
 
-      {role === "ADMIN" && <div className="card">
-        <div className="card-head"><h3>{editingMaterialId ? "Edit Lesson Material" : "Add Lesson Material"}</h3><span className="badge">Admin only</span></div>
-        <div className="form-grid">
-          <input className="input" placeholder="Lesson title" value={title} onChange={e => setTitle(e.target.value)} />
-          <select className="input" value={folder} onChange={e => setFolder(e.target.value)}>{folders.map(x => <option key={x}>{x}</option>)}</select>
-          <input className="input" placeholder="Lesson number / sequence" type="number" min="1" value={sequenceNo} onChange={e => setSequenceNo(e.target.value)} />
-          <input className="input" placeholder="Short description" value={description} onChange={e => setDescription(e.target.value)} />
-        </div>
-        <label className="input file-input">{editingMaterialId ? "Replace workbook (optional)" : "Upload PDF / lesson file"} <input type="file" accept=".pdf,.png,.jpg,.jpeg,.webp" onChange={e => setFile(e.target.files?.[0] || null)} /></label>
-        {editingMaterialId && <p className="muted small">Leave the file field empty to keep the current uploaded workbook.</p>}
-        <input className="input" placeholder="Optional external URL" value={url} onChange={e => setUrl(e.target.value)} />
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><button className="primary compact-btn" onClick={add}>{editingMaterialId ? "Save Changes" : "Save material"}</button>{editingMaterialId && <button type="button" className="secondary compact-btn" onClick={cancelEdit}>Cancel Edit</button>}</div>
-        {message && <div className="muted small" role="status" style={{ marginTop: 10 }}>{message}</div>}
-      </div>}
+    <div className="section">
+      {folders.map(name => {
+        const folderRows = [...(groups[name] || [])].sort((a,b) => (a.unit_no || 999) - (b.unit_no || 999) || Number(a.sequence_no) - Number(b.sequence_no) || a.title.localeCompare(b.title));
+        const isLevel = levelFolders.includes(name); const isExpanded = expandedFolders.has(name);
+        return <section className="material-folder" key={name}>
+          <button type="button" className="folder-title" onClick={() => toggle(setExpandedFolders, name)} aria-expanded={isExpanded} style={{ width:"100%",display:"flex",alignItems:"center",gap:10,cursor:"pointer",textAlign:"left",border:0,background:"transparent",padding:"14px 12px" }}>
+            <span aria-hidden="true">{isExpanded ? "▼" : "▶"}</span><span aria-hidden="true">📁</span><strong style={{flex:1}}>{name}</strong><span>{folderRows.length} lessons</span>
+          </button>
+          {isExpanded && <div className="material-list">
+            {isLevel ? units.map(unit => {
+              const key = name + "::" + unit; const unitRows = folderRows.filter(m => Number(m.unit_no) === unit); const open = expandedUnits.has(key);
+              return <div key={key} style={{ borderTop:"1px solid rgba(148,163,184,.18)" }}>
+                <button type="button" onClick={() => toggle(setExpandedUnits,key)} aria-expanded={open} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"11px 18px 11px 38px",border:0,background:"transparent",cursor:"pointer",textAlign:"left"}}>
+                  <span>{open ? "▼" : "▶"}</span><span aria-hidden="true">📂</span><strong style={{flex:1}}>Unit {unit}</strong><span className="muted small">{unitRows.length} lessons</span>
+                </button>
+                {open && <div>{unitRows.length ? unitRows.map(r => <MaterialRow key={r.id} r={r} onEdit={startEdit} onView={setOpenMaterial} onDelete={deleteMaterial}/>) : <div className="muted small" style={{padding:"8px 60px 14px"}}>No lessons assigned to this Unit yet.</div>}</div>}
+              </div>;
+            }) : folderRows.map(r => <MaterialRow key={r.id} r={r} onEdit={startEdit} onView={setOpenMaterial} onDelete={deleteMaterial}/>)}
+            {isLevel && folderRows.some(m => !m.unit_no) && <div style={{borderTop:"1px solid rgba(148,163,184,.18)"}}><div style={{padding:"11px 38px",fontWeight:700}}>⚠️ Unassigned</div>{folderRows.filter(m=>!m.unit_no).map(r=><MaterialRow key={r.id} r={r} onEdit={startEdit} onView={setOpenMaterial} onDelete={deleteMaterial}/>)}</div>}
+            {!folderRows.length && !isLevel && <div className="muted small" style={{padding:"12px 38px"}}>No materials yet.</div>}
+          </div>}
+        </section>;
+      })}
+    </div>
+    {openMaterial && <div className="gc-modal-backdrop" onContextMenu={e => e.preventDefault()}><div className="gc-material-modal"><div className="gc-modal-head"><h2>📄 {openMaterial.title}</h2><button onClick={() => setOpenMaterial(null)}>Close</button></div><div className="gc-material-frame"><PdfViewer src={"/api/materials/file?materialId=" + encodeURIComponent(openMaterial.id)} title={openMaterial.title}/></div><p>View-only material. The original uploaded workbook remains stored in your platform.</p></div></div>}
+  </main>;
+}
 
-      <div className="section">
-        {ordered.map(name => {
-          const isExpanded = expandedFolders.has(name);
-          const folderRows = [...groups[name]].sort((a: any, b: any) => Number(a.sequence_no) - Number(b.sequence_no));
-          return (
-            <section className="material-folder" key={name}>
-              <button
-                type="button"
-                className="folder-title"
-                onClick={() => toggleFolder(name)}
-                aria-expanded={isExpanded}
-                style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", textAlign: "left", border: 0, background: "transparent", padding: "14px 12px" }}
-              >
-                <span aria-hidden="true" style={{ display: "inline-flex", alignItems: "center", fontSize: 13 }}>{isExpanded ? "▼" : "▶"}</span>
-                <span aria-hidden="true">📁</span>
-                <strong style={{ flex: 1 }}>{name}</strong>
-                <span>{folderRows.length} lessons</span>
-              </button>
-              {isExpanded && <div className="material-list">
-                {folderRows.map((r: any) => (
-                  <div className="material-row" key={r.id} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <div className="sequence">{String(r.sequence_no).padStart(2, "0")}</div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <strong>{r.title}</strong>
-                      <div className="muted small">{r.description || "Lesson material"} • {r.content_data ? "Uploaded file" : r.url ? "External material" : "No file attached"}</div>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
-                      <button type="button" className="secondary compact-btn" onClick={() => startEdit(r)} title="Edit lesson details or replace the workbook">Edit</button>
-                      <button type="button" className="secondary compact-btn" onClick={() => setOpenMaterial(r)} disabled={!r.content_data && !r.url} title={r.content_data || r.url ? "View this material" : "No file attached"}>View</button>
-                      <button type="button" className="compact-btn" onClick={() => deleteMaterial(r)} aria-label={'Permanently delete ' + r.title} title="Permanently delete this material" style={{ background: "#B91C1C", color: "#fff", border: 0, borderRadius: 8, padding: "8px 12px" }}>Delete</button>
-                    </div>
-                  </div>
-                ))}
-              </div>}
-            </section>
-          );
-        })}
-        {ordered.length === 0 && <div className="card muted">No lesson materials have been uploaded yet.</div>}
-      </div>
-
-      {openMaterial && <div className="gc-modal-backdrop" onContextMenu={e => e.preventDefault()}>
-        <div className="gc-material-modal">
-          <div className="gc-modal-head"><h2>📄 {openMaterial.title}</h2><button onClick={() => setOpenMaterial(null)}>Close</button></div>
-          <div className="gc-material-frame"><PdfViewer src={"/api/materials/file?materialId=" + encodeURIComponent(openMaterial.id)} title={openMaterial.title} /></div>
-          <p>View-only material. The original uploaded workbook remains stored in your platform.</p>
-        </div>
-      </div>}
-    </main>
-  );
+function MaterialRow({r,onEdit,onView,onDelete}:{r:any;onEdit:(r:any)=>void;onView:(r:any)=>void;onDelete:(r:any)=>void}) {
+  return <div className="material-row" style={{display:"flex",alignItems:"center",gap:12}}><div className="sequence">{String(r.sequence_no).padStart(2,"0")}</div><div style={{flex:1,minWidth:0}}><strong>{r.title}</strong><div className="muted small">{r.description || "Lesson material"} • {r.content_data ? "Uploaded file" : r.url ? "External material" : "No file attached"}</div></div><div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",justifyContent:"flex-end"}}><button type="button" className="secondary compact-btn" onClick={() => onEdit(r)}>Edit</button><button type="button" className="secondary compact-btn" onClick={() => onView(r)} disabled={!r.content_data && !r.url}>View</button><button type="button" className="compact-btn" onClick={() => onDelete(r)} style={{background:"#B91C1C",color:"#fff",border:0,borderRadius:8,padding:"8px 12px"}}>Delete</button></div></div>;
 }
