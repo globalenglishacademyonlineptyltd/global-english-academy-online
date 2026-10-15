@@ -3,8 +3,19 @@
 import { useEffect, useState } from "react";
 import PdfViewer from "@/app/components/PdfViewer";
 
-const levels = Array.from({ length: 8 }, (_, i) => "Level " + (i + 1));
-const folders = [...levels, "Demo", "Ferris Wheel"];
+const folders = [
+  "Level 0 - Starter",
+  "Level 1 - Beginner",
+  "Level 2 - Elementary",
+  "Level 3 - Lower Intermediate",
+  "Level 4 - Intermediate",
+  "Level 5 - Upper Intermediate",
+  "Level 6 - Advanced",
+  "Games",
+  "Stories",
+  "Flashcards",
+  "Cultural Celebrations"
+];
 
 export default function Materials() {
   const [rows, setRows] = useState<any[]>([]);
@@ -12,7 +23,7 @@ export default function Materials() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [url, setUrl] = useState("");
-  const [folder, setFolder] = useState("Level 1");
+  const [folder, setFolder] = useState(folders[0]);
   const [sequenceNo, setSequenceNo] = useState("1");
   const [file, setFile] = useState<File | null>(null);
   const [message, setMessage] = useState("");
@@ -39,7 +50,7 @@ export default function Materials() {
     setTitle(material.title || "");
     setDescription(material.description || "");
     setUrl(material.url || "");
-    setFolder(material.folder || material.level || "Level 1");
+    setFolder(folders.includes(material.folder || material.level) ? (material.folder || material.level) : folders[0]);
     setSequenceNo(String(material.sequence_no || 1));
     setFile(null);
     setMessage("Editing material. Upload a new file only if you want to replace the existing workbook.");
@@ -51,7 +62,7 @@ export default function Materials() {
     setTitle("");
     setDescription("");
     setUrl("");
-    setFolder("Level 1");
+    setFolder(folders[0]);
     setSequenceNo("1");
     setFile(null);
     setMessage("Edit cancelled.");
@@ -68,8 +79,6 @@ export default function Materials() {
       if (file) {
         mimeType = file.type || "application/octet-stream";
         setMessage("Uploading workbook to secure file storage…");
-        // Keep the upload on the school's own origin. This avoids browser CORS
-        // failures when Railway's private bucket is not browser-accessible.
         const form = new FormData();
         form.append("file", file);
         const uploadResponse = await fetch("/api/materials/upload", {
@@ -94,7 +103,7 @@ export default function Materials() {
       setTitle("");
       setDescription("");
       setUrl("");
-      setFolder("Level 1");
+      setFolder(folders[0]);
       setSequenceNo(String(Number(sequenceNo) + 1));
       setFile(null);
       setMessage(editingMaterialId ? "Material updated." : "Material saved.");
@@ -141,7 +150,7 @@ export default function Materials() {
     (a[k] ??= []).push(m);
     return a;
   }, {} as Record<string, any[]>);
-  const ordered = [...levels, "Demo", "Ferris Wheel", "Uncategorised"].filter(k => groups[k]);
+  const ordered = [...folders, "Uncategorised"].filter(k => groups[k]);
 
   if (role && role !== "ADMIN") return null;
 
@@ -150,7 +159,7 @@ export default function Materials() {
       <div className="topbar">
         <div>
           <h1>Lesson Materials</h1>
-          <p className="muted">Organise the curriculum into eight levels, with separate Demo and Ferris Wheel folders.</p>
+          <p className="muted">Organise your teaching materials by level and resource type.</p>
         </div>
       </div>
 
