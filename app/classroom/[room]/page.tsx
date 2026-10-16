@@ -20,7 +20,7 @@ export default function Classroom(){
  const [materials,setMaterials]=useState<any[]>([]),[rewards,setRewards]=useState<any[]>([]);
  const [interactive,setInteractive]=useState(false),[game,setGame]=useState<any>(null),[score,setScore]=useState(0),[reward,setReward]=useState(""),[sortDrag,setSortDrag]=useState(""),[orderPick,setOrderPick]=useState<string[]>([]);
  const [connected,setConnected]=useState(false),[muted,setMuted]=useState(false),[camera,setCamera]=useState(true),[recording,setRecording]=useState(false),[recordTime,setRecordTime]=useState(0);
- const [showGames,setShowGames]=useState(false),[showLayout,setShowLayout]=useState(false),[openMaterial,setOpenMaterial]=useState<any>(null),[positions,setPositions]=useState<any>({teacher:{x:2,y:2,w:24},student:{x:74,y:2,w:24}});
+ const [showGames,setShowGames]=useState(false),[openMaterial,setOpenMaterial]=useState<any>(null);
  const [loading,setLoading]=useState(true),[error,setError]=useState(""),[status,setStatus]=useState("Starting classroom…"),[ending,setEnding]=useState(false);
 
  const localVideo=useRef<HTMLVideoElement|null>(null),remoteVideo=useRef<HTMLVideoElement|null>(null),localStream=useRef<MediaStream|null>(null),remoteStream=useRef<MediaStream|null>(null),peer=useRef<RTCPeerConnection|null>(null),after=useRef("1970-01-01T00:00:00.000Z"),seen=useRef<Set<string>>(new Set()),poller=useRef<any>(null),recorder=useRef<MediaRecorder|null>(null),recordChunks=useRef<Blob[]>([]),recordStarted=useRef<number>(0),savePromise=useRef<Promise<void>|null>(null),canvas=useRef<HTMLCanvasElement|null>(null);
@@ -28,7 +28,7 @@ export default function Classroom(){
  const teacher=me?.role==="TEACHER",student=me?.role==="STUDENT";
 
  const signal=async(payload:any)=>{try{await fetch("/api/classroom-signals",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({roomCode:room,payload})});}catch{}};
- const broadcast=(extra:any={})=>{if(teacher)signal({type:"state",interactive,game,score,reward,positions,...extra});};
+ const broadcast=(extra:any={})=>{if(teacher)signal({type:"state",interactive,game,score,reward,...extra});};
 
  const createPeer=()=>{
    if(peer.current)return peer.current;
@@ -46,7 +46,7 @@ export default function Classroom(){
  const handleSignal=async(s:any)=>{
    if(seen.current.has(s.id))return;seen.current.add(s.id);const x=s.payload||{};
    if(x.type==="hello"){if(teacher)sendOffer();return;}
-   if(x.type==="state"&&student){setInteractive(!!x.interactive);setGame(x.game||null);setScore(Number(x.score)||0);setReward(x.reward||"");if(x.positions)setPositions(x.positions);return;}
+   if(x.type==="state"&&student){setInteractive(!!x.interactive);setGame(x.game||null);setScore(Number(x.score)||0);setReward(x.reward||"");return;}
    if(x.type==="chat"){setChat(v=>v.concat([{name:x.name||"Classroom",text:x.text||""}]).slice(-80));return;}
    if(x.type==="student_ready"&&teacher){setStatus("Student is ready to participate");return;}
    const p=createPeer();
@@ -130,17 +130,9 @@ export default function Classroom(){
  const endClass=async()=>{if(me?.role==="ADMIN"||!lesson)return;if(ending)return;setEnding(true);try{await fetch("/api/classroom-complete",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:lesson.id})});const exit=await fetch("/api/classroom-exit",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:lesson.id})});if(!exit.ok)throw new Error("Could not register classroom exit.");let state=await exit.json();while(!state.bothExited){await new Promise(resolve=>setTimeout(resolve,1500));const check=await fetch("/api/classroom-exit?lessonId="+encodeURIComponent(lesson.id),{cache:"no-store"});if(!check.ok)throw new Error("Could not check classroom exit status.");state=await check.json();}if(recorder.current)await stopRecording();window.location.replace("https://globalenglishacademy.co.za/");}catch{setEnding(false);setError("We could not confirm both participants have exited. Please try End Class again.");}};
 
  const startGame=(g:any)=>{if(!teacher)return;setGame(g);setInteractive(true);setScore(0);setReward("");setSortDrag("");setOrderPick([]);setShowGames(false);broadcast({game:g,interactive:true,score:0,reward:""});};
- const answer=(item:string)=>{if(!student||!interactive||!game)return;let ok=false;if(game.id==="pick")ok=item===game.answer;if(game.id==="sort"){const parts=item.split("|");const land=parts[0].includes("Dog")||parts[0].includes("Cat");const water=parts[0].includes("Fish")||parts[0].includes("Shark");ok=(land&&parts[1]==="Land")||(water&&parts[1]==="Water");}if(game.id==="order"){const nextOrder=orderPick.concat([item]);setOrderPick(nextOrder);ok=nextOrder.join("|")===game.items.join("|");if(!ok&&nextOrder.length>=game.items.length){setOrderPick([]);setReward("Try the order again!");return;}}const next=ok?score+1:score;setScore(next);setReward(ok?"⭐ Great job!":"Try again!");signal({type:"state",interactive,game,score:next,reward:ok?"⭐ Great job!":"Try again!",positions});};
+ const answer=(item:string)=>{if(!student||!interactive||!game)return;let ok=false;if(game.id==="pick")ok=item===game.answer;if(game.id==="sort"){const parts=item.split("|");const land=parts[0].includes("Dog")||parts[0].includes("Cat");const water=parts[0].includes("Fish")||parts[0].includes("Shark");ok=(land&&parts[1]==="Land")||(water&&parts[1]==="Water");}if(game.id==="order"){const nextOrder=orderPick.concat([item]);setOrderPick(nextOrder);ok=nextOrder.join("|")===game.items.join("|");if(!ok&&nextOrder.length>=game.items.length){setOrderPick([]);setReward("Try the order again!");return;}}const next=ok?score+1:score;setScore(next);setReward(ok?"⭐ Great job!":"Try again!");signal({type:"state",interactive,game,score:next,reward:ok?"⭐ Great job!":"Try again!"});};
  const sendChat=()=>{const text=chatText.trim();if(!text)return;const name=me?.name||"User";setChat(v=>v.concat([{name,text}]).slice(-80));signal({type:"chat",name,text});setChatText("");};
 
- const moveVideo=(who:"teacher"|"student",e:any)=>{
-   if(!teacher)return;
-   const parent=e.currentTarget.parentElement.getBoundingClientRect(),box=e.currentTarget.getBoundingClientRect(),dx=e.clientX-box.left,dy=e.clientY-box.top;
-   const move=(ev:any)=>{const x=clamp(((ev.clientX-parent.left-dx)/parent.width)*100,0,100-positions[who].w),y=clamp(((ev.clientY-parent.top-dy)/parent.height)*100,0,85);setPositions((v:any)=>({...v,[who]:{...v[who],x,y}}));};
-   const up=()=>{window.removeEventListener("pointermove",move);window.removeEventListener("pointerup",up);if(teacher)broadcast();};
-   window.addEventListener("pointermove",move);window.addEventListener("pointerup",up,{once:true});
- };
- const setLayout=(mode:string)=>{const p=mode==="roleplay"?{teacher:{x:4,y:62,w:27},student:{x:69,y:62,w:27}}:mode==="side"?{teacher:{x:3,y:3,w:21},student:{x:27,y:3,w:21}}:{teacher:{x:2,y:2,w:24},student:{x:74,y:2,w:24}};setPositions(p);if(teacher)broadcast({positions:p});setShowLayout(false);};
  const giveReward=async(type:string)=>{if(!lesson||rewards.length>=15)return;const r=await fetch("/api/rewards",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:lesson.id,rewardType:type})});const j=await r.json();if(r.ok)setRewards(v=>v.concat([j]));};
  const time=String(Math.floor(recordTime/60)).padStart(2,"0")+":"+String(recordTime%60).padStart(2,"0");
  const material=materials[0];
@@ -155,7 +147,7 @@ export default function Classroom(){
    <div className="gc-actions">
     {me?.role!=="ADMIN"&&<button className={muted?"active":""} onClick={()=>{const n=!muted;localStream.current?.getAudioTracks().forEach(t=>t.enabled=!n);setMuted(n);}}>🎙 {muted?"Unmute":"Mute"}</button>}
     {me?.role!=="ADMIN"&&<button className={!camera?"active":""} onClick={()=>{const n=!camera;localStream.current?.getVideoTracks().forEach(t=>t.enabled=n);setCamera(n);}}>📷 Camera</button>}
-    {teacher&&<button onClick={()=>setShowLayout(true)}>🎭 Move Cameras</button>}{me?.role!=="ADMIN"&&<button className="danger" onClick={endClass}>{ending?"Waiting…":"End Class"}</button>}
+    {me?.role!=="ADMIN"&&<button className="danger" onClick={endClass}>{ending?"Waiting…":"End Class"}</button>}
    </div>
   </header>
 
@@ -164,14 +156,16 @@ export default function Classroom(){
     <div className="gc-stage">
      <div className="gc-lessonbar"><strong>{lesson.topic||"English Lesson"}</strong><span>{interactive?"🟢 Interactive Mode ON":"Teaching Mode"} {recording?" • 🔴 Recording":""}</span></div>
      <div className="gc-material">{material?.url ? <iframe title={material.title||"English Bright ESL lesson"} src={material.url} allow="fullscreen; autoplay; microphone; camera; clipboard-read; clipboard-write" referrerPolicy="strict-origin-when-cross-origin" /> : material ? <iframe title={material.title||"Assigned lesson"} src={"/api/lesson-materials/file?lessonId="+encodeURIComponent(lesson.id)+"&materialId="+encodeURIComponent(material.id)} /> : <div className="gc-placeholder"><div>📚</div><h2>{lesson.topic||"English Lesson"}</h2><p>{teacher?"No English Bright ESL lesson link is assigned to this booking yet.":"Waiting for the assigned lesson to load."}</p></div>}</div>
-     <div className="gc-video" style={{left:positions.teacher.x+"%",top:(positions.teacher.y+5)+"%",width:positions.teacher.w+"%"}} onPointerDown={e=>moveVideo("teacher",e)}><video ref={teacher?localVideo:remoteVideo} autoPlay playsInline muted={teacher}/><div className="gc-video-label">👩‍🏫 {lesson.teacher_name}</div></div>
-     <div className="gc-video" style={{left:positions.student.x+"%",top:(positions.student.y+5)+"%",width:positions.student.w+"%"}} onPointerDown={e=>moveVideo("student",e)}><video ref={teacher?remoteVideo:localVideo} autoPlay playsInline muted={student}/><div className="gc-video-label">🧒 {lesson.student_name}</div></div>
-     {teacher&&<div className="gc-stage-hint">Drag teacher/student cameras to reposition them during role-play.</div>}
+     
     </div>
     <div className="gc-tools">{teacher?<><button onClick={()=>setShowLayout(true)}>🎭 Move Cameras</button><span className="tool-spacer"></span><button>‹</button><span className="page-count">Page 1</span><button>›</button></>:student?<><strong>Student Tools</strong><span>The assigned interactive workbook is ready to use.</span><span className="tool-spacer"></span><button type="button" onClick={()=>{signal({type:"student_ready"});setStatus("You let your teacher know you are ready");}}>🙋 I’m Ready</button></>:<span>Admin monitoring mode</span>}</div>
    </section>
 
    <aside className="gc-right">
+    <div className="gc-camera-stack">
+     <div className="gc-video gc-video-fixed"><video ref={teacher?localVideo:remoteVideo} autoPlay playsInline muted={teacher}/><div className="gc-video-label">👩‍🏫 {lesson.teacher_name}</div></div>
+     <div className="gc-video gc-video-fixed"><video ref={teacher?remoteVideo:localVideo} autoPlay playsInline muted={student}/><div className="gc-video-label">🧒 {lesson.student_name}</div></div>
+    </div>
     <div className="gc-right-head"><strong>Classroom Controls</strong><span>51Talk-inspired 1-to-1 interactive teaching</span></div>
     {teacher?<div className="gc-panel"><h3>Student Interaction</h3><div className="gc-control-row"><button className={interactive?"active":""} onClick={()=>{const n=!interactive;setInteractive(n);setReward("");broadcast({interactive:n});}}>{interactive?"🟢 Student Controls ON":"⚪ Student Controls OFF"}</button></div></div>:student?<div className="gc-panel"><h3>Student Tools</h3><p>The assigned interactive workbook is ready to use.</p><button type="button" onClick={()=>{signal({type:"student_ready"});setStatus("You let your teacher know you are ready");}}>🙋 I’m Ready</button></div>:null}
     <div className="gc-panel"><h3>Lesson</h3><strong>{lesson.topic||"English Lesson"}</strong><p>{lesson.student_name} • {lesson.student_level||"English"}{lesson.student_age?" • Age "+lesson.student_age:""}</p></div>
@@ -180,7 +174,7 @@ export default function Classroom(){
    </aside>
   </div>
 
-  {showLayout&&<div className="gc-modal-backdrop" onClick={()=>setShowLayout(false)}><div className="gc-modal" onClick={e=>e.stopPropagation()}><div className="gc-modal-head"><h2>Role-play Camera Layout</h2><button onClick={()=>setShowLayout(false)}>Close</button></div><p>Use a preset or drag the camera windows directly on the lesson stage.</p><div className="gc-layout-buttons"><button onClick={()=>setLayout("normal")}>Normal Corners</button><button onClick={()=>setLayout("roleplay")}>Role Play</button><button onClick={()=>setLayout("side")}>Side by Side</button></div></div></div>}
+  
 
   {teacher&&openMaterial&&!openMaterial.url&&<div className="gc-modal-backdrop" onContextMenu={e=>e.preventDefault()}><div className="gc-material-modal"><div className="gc-modal-head"><h2>📄 {openMaterial.title}</h2><button onClick={()=>setOpenMaterial(null)}>Close</button></div><div className="gc-material-frame"><PdfViewer src={"/api/lesson-materials/file?lessonId="+encodeURIComponent(lesson.id)+"&materialId="+encodeURIComponent(openMaterial.id)} title={openMaterial.title}/></div><p>View-only assigned lesson material.</p></div></div>}
  </main>;
