@@ -64,9 +64,38 @@ export async function DELETE(req: Request) {
   try { body = await req.json(); } catch { return NextResponse.json({ error: "A material ID is required." }, { status: 400 }); }
   const materialId = body.materialId;
   if (!materialId) return NextResponse.json({ error: "A material ID is required." }, { status: 400 });
-  const existing = await query("SELECT id FROM materials WHERE id=$1", [materialId]);
+  const existing = await query<any>("SELECT id,folder,unit_no,sequence_no,title FROM materials WHERE id=$1", [materialId]);
   if (!existing.rowCount) return NextResponse.json({ error: "Material not found. It may already have been deleted." }, { status: 404 });
+  const deleted = existing.rows[0];
   await query("DELETE FROM lesson_materials WHERE material_id=$1", [materialId]);
   await query("DELETE FROM materials WHERE id=$1", [materialId]);
-  return NextResponse.json({ ok: true, deletedId: materialId });
+
+  // Close the numbering gap only inside the deleted lesson's exact folder and unit.
+  // Preserve each lesson's descriptive title while updating its displayed Lesson N label.
+  const remaining = await query<any>(
+    `WITH ordered AS (
+       SELECT id,
+              row_number() OVER (ORDER BY sequence_no ASC NULLS LAST, created_at ASC, title ASC, id ASC)::int AS new_sequence
+       FROM materials
+       WHERE folder = $1 AND unit_no IS NOT DISTINCT FROM $2
+     )
+     UPDATE materials AS m
+     SET sequence_no = ordered.new_sequence,
+         title = CASE
+           WHEN m.title ~* 'lesson[ _-]*[0-9]+'
+             THEN regexp_replace(m.title, 'lesson[ _-]*[0-9]+', 'Lesson ' || ordered.new_sequence::text, 'i')
+           ELSE 'Lesson ' || ordered.new_sequence::text || ' — ' || m.title
+         END
+     FROM ordered
+     WHERE m.id = ordered.id
+     RETURNING m.id, m.sequence_no, m.title`,
+    [deleted.folder, deleted.unit_no]
+  );
+  return NextResponse.json({
+    ok: true,
+    deletedId: materialId,
+    renumberedCount: remaining.rowCount || 0,
+    folder: deleted.folder,
+    unitNo: deleted.unit_no,
+  });
 }
