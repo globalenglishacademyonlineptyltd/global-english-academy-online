@@ -9,7 +9,7 @@ export async function POST(req:Request){
  if(!lessonResult.rowCount)return NextResponse.json({error:"The booked lesson could not be found."},{status:404});
  const lesson=lessonResult.rows[0];
  if(decision==="APPROVED"){
-   const tz=process.env.SCHOOL_TIMEZONE||"Africa/Johannesburg";
+   const tz="Asia/Shanghai";
    const localDate=new Date(lesson.starts_at).toLocaleDateString("en-CA",{timeZone:tz});
    const localTime=new Date(lesson.starts_at).toLocaleTimeString("en-GB",{timeZone:tz,hour:"2-digit",minute:"2-digit",hour12:false});
    const duration=Number(lesson.lesson_duration_minutes)||30;
