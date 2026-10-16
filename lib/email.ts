@@ -88,3 +88,11 @@ export async function sendStudentCancellationTeacherEmail(d:{teacherEmail:string
   const text="[Class] : "+type+"\n[Date, Time] : "+date+" "+time+":00(GMT+02)\n[Student] : "+d.studentName+"\n[Lesson] : "+(d.lessonTitle||"English Lesson")+"\n\nThe student cancelled this lesson through Global English Academy.";
   return sendEmail(d.teacherEmail,subject,text);
 }
+
+export async function sendNoReplacementTeacherEmail(d:{studentEmail:string;studentName:string;startsAt:string}){
+  const tz=process.env.SCHOOL_TIMEZONE||"Africa/Johannesburg";
+  const date=new Date(d.startsAt).toLocaleString("en-ZA",{dateStyle:"full",timeStyle:"short",timeZone:tz});
+  const subject="Important update about your English lesson — Global English Academy";
+  const text="Dear "+d.studentName+",\n\nWe regret to inform you that your teacher has had to cancel your lesson scheduled for "+date+" due to an emergency. Unfortunately, no other teacher is available at your originally booked date and time.\n\nPlease sign in to your Global English Academy Online account and book another class at a time that suits you.\n\nWe humbly apologise for the inconvenience caused. Please be assured that the matter will be addressed professionally. Thank you for your understanding.\n\nKind regards,\nSchool Administration\nGlobal English Academy Online";
+  return sendEmail(d.studentEmail,subject,text);
+}
