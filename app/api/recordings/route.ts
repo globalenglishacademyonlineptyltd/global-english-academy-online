@@ -22,10 +22,11 @@ async function authorizedLesson(lessonId:string,roomCode:string|undefined,s:any)
  return{lesson:l};
 }
 function parseData(data:any){
- if(typeof data!=="string")return null;
- const match=data.match(/^data:([^;,]+)?(?:;[^,]*)?;base64,([A-Za-z0-9+/=\r\n]+)$/);
- if(!match)return null;
- return{mime:match[1]||"video/webm",bytes:Buffer.from(match[2].replace(/\s/g,""),"base64")};
+ if(typeof data!=="string"||!data.startsWith("data:"))return null;
+ const marker=data.indexOf(";base64,");if(marker<0)return null;
+ const header=data.slice(5,marker);const mime=header.split(";")[0]||"video/webm";const encoded=data.slice(marker+8).replace(/\s/g,"");
+ if(!encoded||!/^[A-Za-z0-9+/]*={0,2}$/.test(encoded))return null;
+ return{mime,bytes:Buffer.from(encoded,"base64")};
 }
 export async function POST(req:Request){
  const s=await requireRole(["ADMIN","TEACHER","STUDENT"]);
