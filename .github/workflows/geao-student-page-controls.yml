@@ -1,0 +1,42 @@
+name: GEAO student page control fix
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: "!contains(github.event.head_commit.message, '[geao-fix]')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Remove student page controls
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p = Path('app/classroom/[room]/page.tsx')
+          s = p.read_text()
+          pattern = r'\}\s*:\s*student\?\s*<><strong>Student Tools</strong>.*?<\/>'
+          m = re.search(pattern, s, flags=re.S)
+          if not m:
+              raise SystemExit('Could not locate student classroom tools block')
+          block = m.group(0)
+          # Keep every student classroom tool, but remove only the page-navigation controls.
+          block = re.sub(r'<span className="tool-spacer"\s*/>\s*<button[^>]*>‹</button>\s*<span className="page-count">Page 1</span>\s*<button[^>]*>›</button>', '', block)
+          # Also remove any disabled student page-control variant if present.
+          block = re.sub(r'<span className="tool-spacer"\s*/>\s*<button[^>]*disabled=\{!interactive\}[^>]*>‹</button>\s*<span className="page-count">Page 1</span>\s*<button[^>]*disabled=\{!interactive\}[^>]*>›</button>', '', block)
+          s = s[:m.start()] + block + s[m.end():]
+          p.write_text(s)
+          print('Student page navigation controls removed; classroom tools retained.')
+          PY
+      - name: Commit patch
+        run: |
+          git config user.name "GEAO Automation"
+          git config user.email "admin@globalenglishacademyonline.co.za"
+          git add app/classroom/'[room]'/page.tsx .github/workflows/geao-student-page-controls.yml
+          git commit -m "[geao-fix] Student classroom tools only; teacher controls pages" || exit 0
+          git push
