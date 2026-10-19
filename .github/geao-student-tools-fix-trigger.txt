@@ -1,0 +1,1 @@
+Student classroom page navigation is teacher-only.
