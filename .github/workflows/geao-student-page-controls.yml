@@ -17,19 +17,34 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import re
           p = Path('app/classroom/[room]/page.tsx')
           s = p.read_text()
-          pattern = r'\}\s*:\s*student\?\s*<><strong>Student Tools</strong>.*?<\/>'
-          m = re.search(pattern, s, flags=re.S)
-          if not m:
-              raise SystemExit('Could not locate student classroom tools block')
-          block = m.group(0)
-          block = re.sub(r'<span className="tool-spacer"\s*/>\s*<button[^>]*>‹</button>\s*<span className="page-count">Page 1</span>\s*<button[^>]*>›</button>', '', block)
-          block = re.sub(r'<span className="tool-spacer"\s*/>\s*<button[^>]*disabled=\{!interactive\}[^>]*>‹</button>\s*<span className="page-count">Page 1</span>\s*<button[^>]*disabled=\{!interactive\}[^>]*>›</button>', '', block)
-          s = s[:m.start()] + block + s[m.end():]
+          replacements = [
+            ('<span className="tool-spacer"/><button disabled={!interactive}>‹</button><span className="page-count">Page 1</span><button disabled={!interactive}>›</button>', ''),
+            ('<span className="tool-spacer"/><button disabled={!interactive}>‹</button><span className="page-count">Page 1</span><button disabled={!interactive}>›</button>', ''),
+          ]
+          changed = False
+          for old, new in replacements:
+              if old in s:
+                  s = s.replace(old, new)
+                  changed = True
+          if not changed:
+              # Remove the student-only navigation fragment even if formatting differs.
+              import re
+              patterns = [
+                r'<span className="tool-spacer"\s*/>\s*<button\s+disabled=\{!interactive\}[^>]*>‹</button>\s*<span className="page-count">Page 1</span>\s*<button\s+disabled=\{!interactive\}[^>]*>›</button>',
+                r'<span className="tool-spacer"\s*/>\s*<button[^>]*>‹</button>\s*<span className="page-count">Page 1</span>\s*<button[^>]*>›</button>'
+              ]
+              for pattern in patterns:
+                  s2, n = re.subn(pattern, '', s)
+                  if n:
+                      s = s2
+                      changed = True
+                      break
+          if not changed:
+              raise SystemExit('Student page navigation fragment was not found')
           p.write_text(s)
-          print('Student page navigation controls removed; classroom tools retained.')
+          print('Student page navigation controls removed; student tools retained.')
           PY
       - name: Commit patch
         run: |
