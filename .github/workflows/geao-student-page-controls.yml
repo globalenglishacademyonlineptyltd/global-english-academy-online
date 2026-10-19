@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   patch:
-    if: "!contains(github.event.head_commit.message, '[geao-fix]')"
+    if: "!contains(github.event.head_commit.message, 'Student classroom tools only')"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,9 +25,7 @@ jobs:
           if not m:
               raise SystemExit('Could not locate student classroom tools block')
           block = m.group(0)
-          # Keep every student classroom tool, but remove only the page-navigation controls.
           block = re.sub(r'<span className="tool-spacer"\s*/>\s*<button[^>]*>‹</button>\s*<span className="page-count">Page 1</span>\s*<button[^>]*>›</button>', '', block)
-          # Also remove any disabled student page-control variant if present.
           block = re.sub(r'<span className="tool-spacer"\s*/>\s*<button[^>]*disabled=\{!interactive\}[^>]*>‹</button>\s*<span className="page-count">Page 1</span>\s*<button[^>]*disabled=\{!interactive\}[^>]*>›</button>', '', block)
           s = s[:m.start()] + block + s[m.end():]
           p.write_text(s)
