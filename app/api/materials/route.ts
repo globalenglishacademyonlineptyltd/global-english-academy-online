@@ -13,7 +13,7 @@ const LEVEL_FOLDERS = [
   "Level 6 - Advanced"
 ];
 const UNIT_COUNT = 12;
-const isLevelFolder = (value: string) => LEVEL_FOLDERS.includes(value) || ["Games", "Stories", "Flashcards", "Cultural Celebrations"].some(category => value.startsWith(category + " / ") && LEVEL_FOLDERS.includes(value.slice(category.length + 3)));
+const isLevelFolder = (value: string) => LEVEL_FOLDERS.includes(value) || ["Flashcards", "Homework"].some(category => value.startsWith(category + " / ") && LEVEL_FOLDERS.includes(value.slice(category.length + 3)));
 
 export async function GET() {
   await requireRole(["ADMIN"]);
