@@ -46,7 +46,7 @@ export async function PATCH(req: Request) {
   if (!existing.rowCount) return NextResponse.json({ error: "Material not found." }, { status: 404 });
   const f = folder || level || DEFAULT_FOLDER;
   const unit = unitNo === "" || unitNo === null || typeof unitNo === "undefined" ? null : Number(unitNo);
-  if (LEVEL_FOLDERS.includes(f) && unit !== null && (!Number.isInteger(unit) || unit < 1 || unit > UNIT_COUNT)) {
+  if (isLevelFolder(f) && (unit === null || !Number.isInteger(unit) || unit < 1 || unit > UNIT_COUNT)) {
     return NextResponse.json({ error: "Please choose a valid Unit 1–12." }, { status: 400 });
   }
   const seq = Number(sequenceNo) || 1;
