@@ -20,7 +20,7 @@ const levelsForCategory = (category: string) => categoryLevels[category] || leve
 const materialFolders = [...folders, ...categoryFolders.flatMap(category => levelsForCategory(category).map(level => `${category} / ${level}`))];
 const units = Array.from({ length: 12 }, (_, i) => i + 1);
 const isLevelFolder = (value: string) => levelFolders.includes(value) || categoryFolders.some(category => value.startsWith(category + " / ") && levelFolders.includes(value.slice(category.length + 3)));
-const usesUnitFolders = (category: string) => category === "Flashcards" || category === "Homework";
+const usesUnitFolders = (category: string) => category === "Flashcards" || category === "Homework" || category === "Legacy Level Materials";
 const levelNameFor = (value: string) => value.includes(" / ") ? value.split(" / ").slice(1).join(" / ") : value;
 
 export default function Materials() {
