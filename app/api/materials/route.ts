@@ -13,6 +13,7 @@ const LEVEL_FOLDERS = [
   "Level 6 - Advanced"
 ];
 const UNIT_COUNT = 12;
+const isLevelFolder = (value: string) => LEVEL_FOLDERS.includes(value) || ["Games", "Stories", "Flashcards", "Cultural Celebrations"].some(category => value.startsWith(category + " / ") && LEVEL_FOLDERS.includes(value.slice(category.length + 3)));
 
 export async function GET() {
   await requireRole(["ADMIN"]);
@@ -26,7 +27,7 @@ export async function POST(req: Request) {
   if (!title?.trim()) return NextResponse.json({ error: "Title required" }, { status: 400 });
   const f = folder || level || DEFAULT_FOLDER;
   const unit = unitNo === "" || unitNo === null || typeof unitNo === "undefined" ? null : Number(unitNo);
-  if (LEVEL_FOLDERS.includes(f) && unit !== null && (!Number.isInteger(unit) || unit < 1 || unit > UNIT_COUNT)) {
+  if (isLevelFolder(f) && (unit === null || !Number.isInteger(unit) || unit < 1 || unit > UNIT_COUNT)) {
     return NextResponse.json({ error: "Please choose a valid Unit 1–12." }, { status: 400 });
   }
   const seq = Number(sequenceNo) || 1;
