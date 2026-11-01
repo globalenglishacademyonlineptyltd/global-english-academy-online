@@ -58,10 +58,10 @@ export default function Classroom(){
     let active=true;let frame=0;
     const draw=()=>{if(!active)return;ctx.fillStyle="#111827";ctx.fillRect(0,0,1280,720);
      const tile=(v:HTMLVideoElement|null,x:number,y:number,w:number,h:number,label:string)=>{if(v&&v.readyState>=2&&v.videoWidth){const scale=Math.max(w/v.videoWidth,h/v.videoHeight),sw=w/scale,sh=h/scale;ctx.drawImage(v,(v.videoWidth-sw)/2,(v.videoHeight-sh)/2,sw,sh,x,y,w,h);}else{ctx.fillStyle="#263449";ctx.fillRect(x,y,w,h);}ctx.fillStyle="rgba(0,0,0,.65)";ctx.fillRect(x,y+h-42,w,42);ctx.fillStyle="#fff";ctx.font="22px sans-serif";ctx.fillText(label,x+14,y+h-13);};
-     tile(localVideo.current,0,0,640,360,lesson.teacher_name||"Teacher");tile(remoteVideo.current,640,0,640,360,lesson.student_name||"Student");
      const shared=sharingScreen?localScreenVideo.current:remoteScreenVideo.current;
-     if(shared&&shared.readyState>=2&&shared.videoWidth)tile(shared,0,360,1280,360,"Shared screen");
-     else{ctx.fillStyle="#fff";ctx.font="22px sans-serif";ctx.fillText(lesson.topic||"English lesson",24,410);ctx.font="16px sans-serif";ctx.fillText("Embedded lesson visuals are not directly accessible to browser recording.",24,446);}
+     if(shared&&shared.readyState>=2&&shared.videoWidth)tile(shared,0,0,1280,720,"Assigned lesson material");
+     else{ctx.fillStyle="#fff";ctx.font="22px sans-serif";ctx.fillText(lesson.topic||"English lesson",24,410);ctx.font="16px sans-serif";ctx.fillText("Waiting for the shared lesson display.",24,446);}
+     tile(localVideo.current,0,0,320,180,lesson.teacher_name||"Teacher");tile(remoteVideo.current,960,0,320,180,lesson.student_name||"Student");
      frame=requestAnimationFrame(draw);};
     draw();
     const video=surface.captureStream(20),audioCtx=new AudioContext(),mix=audioCtx.createMediaStreamDestination();
