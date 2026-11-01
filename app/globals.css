@@ -348,3 +348,14 @@ body{background:#f5f8fc}
 .gc-tool-content button.active{background:#fce7f3;border-color:#ec4899;color:#9d174d}
 .gc-tool-clock{font-size:34px;letter-spacing:.06em;text-align:center;color:#2563eb;font-variant-numeric:tabular-nums}
 .gc-tool-status{display:block;margin-top:8px;color:#0f766e;font-size:10px}
+
+/* In-class device picker */
+.gc-device-settings{margin:0 18px 12px;padding:14px 16px;background:#fff;border:1px solid #dbe5f1;border-radius:10px;box-shadow:0 5px 18px rgba(15,23,42,.07)}
+.gc-device-settings-head,.gc-device-settings-footer{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.gc-device-settings-head strong{font-size:13px;color:#172033}
+.gc-device-settings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:12px 0}
+.gc-device-settings-grid label{display:grid;gap:5px;color:#475569;font-size:11px;font-weight:750}
+.gc-device-settings-grid select{width:100%;min-width:0;padding:9px;border:1px solid #dbe3ed;border-radius:7px;background:#fff;color:#172033;font:inherit}
+.gc-device-settings-footer small{color:#64748b;font-size:10px;line-height:1.4}
+.gc-device-settings-footer button{background:#2563eb;color:#fff;border-color:#2563eb;font-weight:750}
+@media(max-width:640px){.gc-device-settings{margin:0 8px 10px;padding:11px}.gc-device-settings-grid{grid-template-columns:1fr}.gc-device-settings-footer{align-items:flex-start;flex-direction:column}}
