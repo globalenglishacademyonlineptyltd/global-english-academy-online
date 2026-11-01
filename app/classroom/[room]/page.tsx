@@ -43,10 +43,24 @@ export default function Classroom(){
    const captured=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:{ideal:30,max:30}},audio:true});
    if(!captured.getVideoTracks().length){captured.getTracks().forEach(t=>t.stop());throw new Error("Screen capture did not provide a video track.");}
    displayStream.current=captured;
-   const audioIncluded=captured.getAudioTracks().length>0;
+   const tabAudioIncluded=captured.getAudioTracks().length>0;
+   const microphoneIncluded=!!localStream.current?.getAudioTracks().some(t=>t.readyState==="live");
+   let audioContext:AudioContext|null=null;
+   let recordingStream=captured;
+   if(tabAudioIncluded||microphoneIncluded){
+    try{
+     audioContext=new AudioContext();
+     const destination=audioContext.createMediaStreamDestination();
+     if(tabAudioIncluded)new MediaStream(captured.getAudioTracks()).getTracks().forEach(t=>audioContext!.createMediaStreamSource(new MediaStream([t])).connect(destination));
+     if(microphoneIncluded)new MediaStream(localStream.current!.getAudioTracks().filter(t=>t.readyState==="live")).getTracks().forEach(t=>audioContext!.createMediaStreamSource(new MediaStream([t])).connect(destination));
+     recordingStream=new MediaStream([...captured.getVideoTracks(),...destination.stream.getAudioTracks()]);
+     await audioContext.resume();
+    }catch{audioContext?.close().catch(()=>{});audioContext=null;recordingStream=captured;}
+   }
+   const audioIncluded=tabAudioIncluded&&microphoneIncluded;
    const mimeTypes=["video/webm;codecs=vp9,opus","video/webm;codecs=vp8,opus","video/webm"];
    const mime=mimeTypes.find(type=>MediaRecorder.isTypeSupported(type))||"";
-   const mr=new MediaRecorder(captured,mime?{mimeType:mime,videoBitsPerSecond:2500000}:undefined);
+   const mr=new MediaRecorder(recordingStream,mime?{mimeType:mime,videoBitsPerSecond:2500000}:undefined);
    recorder.current=mr;recordChunks.current=[];recordStarted.current=Date.now();shouldSaveRecording.current=true;setRecordTime(0);setRecording(true);
    mr.ondataavailable=e=>{if(e.data.size)recordChunks.current.push(e.data);};
    mr.onerror=()=>setStatus("The browser reported a recording error. Try stopping and starting the recording again.");
@@ -54,7 +68,7 @@ export default function Classroom(){
     const durationSeconds=Math.max(0,Math.floor((Date.now()-recordStarted.current)/1000));
     const blob=new Blob(recordChunks.current,{type:mr.mimeType||"video/webm"});
     recordChunks.current=[];
-    captured.getTracks().forEach(t=>t.stop());displayStream.current=null;
+    captured.getTracks().forEach(t=>t.stop());recordingStream.getTracks().forEach(t=>{if(t!==captured.getVideoTracks()[0])t.stop();});displayStream.current=null;if(audioContext)void audioContext.close().catch(()=>{});
     savePromise.current=(async()=>{
      if(!shouldSaveRecording.current)return;
      if(blob.size<1024){setStatus("Recording was too small to save safely; no broken recording was stored.");return;}
@@ -71,14 +85,14 @@ export default function Classroom(){
       }
       const final=await fetch("/api/recordings",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"finalize",lessonId:lesson.id,roomCode:room,chunkCount:total,durationSeconds,mimeType:"video/webm"})});
       if(!final.ok){const body=await final.json().catch(()=>({}));throw new Error(body.error||"Recording validation failed.");}
-      setStatus(audioIncluded?"Full classroom tab recording saved successfully, including tab audio.":"Classroom video saved. No tab-audio track was supplied by the browser; enable Share tab audio next time to include lesson audio.");
+      setStatus(audioIncluded?"Full classroom recording saved, including lesson/tab audio and your microphone.":tabAudioIncluded?"Classroom recording saved with tab audio. Microphone audio was not available in the recording mix.":"Classroom recording saved with microphone audio. Enable Share tab audio in the browser prompt to include lesson sounds and the other participant audio.");
      }catch(err){setStatus(err instanceof Error?err.message:"Recording could not be safely saved; the previous recording was kept.");}
      finally{URL.revokeObjectURL(url);}
     })();
    };
    captured.getVideoTracks()[0].addEventListener("ended",()=>{if(recorder.current===mr&&mr.state!=="inactive")void stopRecording(true);},{once:true});
    mr.start(1000);
-   setStatus(audioIncluded?"Recording classroom tab, interactive lesson, both cameras and tab audio.":"Recording classroom tab and both cameras. Enable Share tab audio for lesson sound.");
+   setStatus(audioIncluded?"Recording classroom, interactive lesson, both cameras, tab audio and microphone.":tabAudioIncluded?"Recording classroom tab, both cameras and tab audio.":"Recording classroom tab and microphone. Enable Share tab audio to capture lesson and participant audio.");
   }catch(err){setRecording(false);displayStream.current?.getTracks().forEach(t=>t.stop());displayStream.current=null;setStatus(err instanceof Error?err.message:"Screen recording could not be started. Check browser permissions.");}
  };
  const stopRecording=async(save=true)=>{const active=recorder.current;if(!active)return;shouldSaveRecording.current=save;const stopped=new Promise<void>(resolve=>{if(active.state==="inactive"){resolve();return;}active.addEventListener("stop",()=>resolve(),{once:true});});if(active.state!=="inactive")active.stop();await stopped;if(savePromise.current)await savePromise.current;recorder.current=null;recordStarted.current=0;setRecording(false);};
