@@ -29,7 +29,7 @@ function parseData(data:any){
  return{mime,bytes:Buffer.from(encoded,"base64")};
 }
 export async function POST(req:Request){
- const s=await requireRole(["ADMIN","TEACHER","STUDENT"]);
+ const s=await requireRole(["ADMIN","TEACHER"]);
  const body=await req.json();
  const{lessonId,roomCode,durationSeconds,mimeType,data,action,chunkIndex,chunkCount}=body;
  if(!lessonId)return NextResponse.json({error:"lessonId is required."},{status:400});
@@ -74,7 +74,7 @@ export async function GET(req:Request){
  const lessonId=new URL(req.url).searchParams.get("lessonId");
  let sql="SELECT r.id,r.lesson_id,r.storage_url,r.duration_seconds,r.created_at,l.teacher_id,l.student_id,l.room_code,l.starts_at,t.full_name teacher_name,st.full_name student_name FROM recordings r JOIN lessons l ON l.id=r.lesson_id JOIN users t ON t.id=l.teacher_id JOIN users st ON st.id=l.student_id";
  const values:any[]=[];
- if(lessonId){sql+=" WHERE r.lesson_id=$1 AND t.deleted_at IS NULL AND st.deleted_at IS NULL";values.push(lessonId);}
+ if(lessonId){sql+=" WHERE r.lesson_id=$1 AND t.deleted_at IS NULL AND st.deleted_at IS NULL";values.push(lessonId);if(s.role==="TEACHER"){sql+=" AND l.teacher_id=$2";values.push(s.id);}else if(s.role==="STUDENT"){sql+=" AND l.student_id=$2";values.push(s.id);}}
  else if(s.role==="TEACHER"){sql+=" WHERE l.teacher_id=$1 AND t.deleted_at IS NULL AND st.deleted_at IS NULL";values.push(s.id);}
  else if(s.role==="STUDENT"){sql+=" WHERE l.student_id=$1 AND t.deleted_at IS NULL AND st.deleted_at IS NULL";values.push(s.id);}
  else{sql+=" WHERE t.deleted_at IS NULL AND st.deleted_at IS NULL";}
