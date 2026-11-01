@@ -312,7 +312,7 @@ body{background:#f5f8fc}
 .gc-material-stage{position:absolute;left:18px;right:18px;top:58px;bottom:18px;overflow:visible;border:0;background:transparent;display:block;}
 .gc-material-stage .gc-material-frame{position:absolute;inset:0;border-radius:9px;background:#f8fafc;border:1px solid #e2e8f0;overflow:hidden;display:flex;align-items:center;justify-content:center;}
 .gc-material-frame img,.gc-material-frame iframe{width:100%;height:100%;border:0;object-fit:contain;background:#fff;}
-.gc-annotation-canvas{position:absolute;left:18px;right:18px;top:58px;bottom:18px;width:calc(100% - 36px);height:calc(100% - 76px);z-index:12;touch-action:none;pointer-events:none;}
+.gc-annotation-canvas{position:absolute;left:18px;right:18px;top:58px;bottom:18px;width:calc(100% - 36px);height:calc(100% - 76px);z-index:30;touch-action:none;pointer-events:none;}
 .gc-annotation-canvas.teacher-annotation{pointer-events:auto;cursor:crosshair;}
 .gc-annotation-canvas.student-annotation{pointer-events:none;}
 .gc-student-lock{position:absolute;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;background:rgba(15,23,42,.58);color:#fff;font-size:clamp(15px,2vw,23px);font-weight:800;letter-spacing:.01em;}
@@ -361,6 +361,6 @@ body{background:#f5f8fc}
 @media(max-width:640px){.gc-device-settings{margin:0 8px 10px;padding:11px}.gc-device-settings-grid{grid-template-columns:1fr}.gc-device-settings-footer{align-items:flex-start;flex-direction:column}}
 
 /* Dedicated screen-share surface keeps teacher and student camera feeds intact. */
-.gc-screen-share-overlay{position:absolute;left:18px;right:18px;top:58px;bottom:18px;z-index:10;display:flex;align-items:center;justify-content:center;background:#0f172a;border:2px solid #2563eb;border-radius:9px;overflow:hidden;pointer-events:none;}
+.gc-screen-share-overlay{position:absolute;left:18px;right:18px;top:58px;bottom:18px;z-index:22;display:flex;align-items:center;justify-content:center;background:#0f172a;border:2px solid #2563eb;border-radius:9px;overflow:hidden;pointer-events:none;}
 .gc-screen-share-overlay video{width:100%;height:100%;object-fit:contain;background:#0f172a;}
 .gc-screen-share-overlay span{position:absolute;left:10px;top:10px;padding:5px 8px;border-radius:6px;background:rgba(15,23,42,.78);color:#fff;font-size:9px;font-weight:850;letter-spacing:.08em;}
