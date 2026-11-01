@@ -14,6 +14,10 @@ export async function GET(req:Request){
   if(!lesson.rowCount)return NextResponse.json({error:"Classroom not found."},{status:404});
   const l=lesson.rows[0];
   if(s.id!==l.teacher_id&&s.id!==l.student_id&&s.role!=="ADMIN")return NextResponse.json({error:"Not allowed."},{status:403});
+  const teacherOnly=["teaching_poll","teaching_close","class_timer","roll_call","screen_share"];
+  const studentOnly=["teaching_answer","roll_response","student_ready"];
+  if(s.role!=="ADMIN"&&teacherOnly.includes(String(payload.type))&&s.id!==l.teacher_id)return NextResponse.json({error:"Only the lesson teacher can send this classroom control."},{status:403});
+  if(s.role!=="ADMIN"&&studentOnly.includes(String(payload.type))&&s.id!==l.student_id)return NextResponse.json({error:"Only the booked student can send this classroom response."},{status:403});
   const r=await query(
     "SELECT id,room_code,sender_id,payload,created_at FROM classroom_signals WHERE room_code=$1 AND created_at>$2 ORDER BY created_at ASC LIMIT 200",
     [roomCode,after]
