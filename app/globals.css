@@ -383,3 +383,8 @@ body{background:#f5f8fc}
 .gc-device-settings-footer>div{display:flex;gap:7px;flex-wrap:wrap}
 .gc-device-settings-footer button+button{margin-left:0}
 @media(max-width:640px){.gc-device-meter{grid-template-columns:1fr;gap:5px}}
+
+/* Automatically streamed lesson surface from the dedicated classroom browser. */
+.gc-captured-material{position:absolute;inset:0;width:100%;height:100%;overflow:hidden;background:#0f172a;display:flex;align-items:center;justify-content:center;touch-action:pan-y;outline:none}
+.gc-captured-material img{display:block;width:100%;height:100%;object-fit:contain;user-select:none;-webkit-user-drag:none}
+.gc-material-frame:has(.gc-captured-material){position:relative}
