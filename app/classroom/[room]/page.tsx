@@ -19,7 +19,8 @@ export default function Classroom(){
  const [interactive,setInteractive]=useState(false),[game,setGame]=useState<any>(null),[score,setScore]=useState(0),[reward,setReward]=useState(""),[sortDrag,setSortDrag]=useState(""),[orderPick,setOrderPick]=useState<string[]>([]),[teacherPresent,setTeacherPresent]=useState(false);
  const [connected,setConnected]=useState(false),[muted,setMuted]=useState(false),[camera,setCamera]=useState(true),[recording,setRecording]=useState(false),[recordTime,setRecordTime]=useState(0),[openMaterial,setOpenMaterial]=useState<any>(null);
  const [deviceSettingsOpen,setDeviceSettingsOpen]=useState(false),[audioInputs,setAudioInputs]=useState<MediaDeviceInfo[]>([]),[videoInputs,setVideoInputs]=useState<MediaDeviceInfo[]>([]),[selectedAudioInput,setSelectedAudioInput]=useState(""),[selectedVideoInput,setSelectedVideoInput]=useState(""),[deviceStatus,setDeviceStatus]=useState(""),[micLevel,setMicLevel]=useState(0);
- const [sharingScreen,setSharingScreen]=useState(false);\n const [captureReady,setCaptureReady]=useState(false),[captureFrame,setCaptureFrame]=useState("");
+ const [sharingScreen,setSharingScreen]=useState(false);
+ const [captureReady,setCaptureReady]=useState(false),[captureFrame,setCaptureFrame]=useState("");
  const captureImage=useRef<HTMLImageElement|null>(null),captureFrameUrl=useRef("");
  const [remoteScreenActive,setRemoteScreenActive]=useState(false);
  const [loading,setLoading]=useState(true),[error,setError]=useState(""),[status,setStatus]=useState("Starting classroom…"),[ending,setEnding]=useState(false);
@@ -49,7 +50,8 @@ export default function Classroom(){
   const id=setInterval(()=>{void poll();},250);return()=>{active=false;clearInterval(id);if(captureFrameUrl.current)URL.revokeObjectURL(captureFrameUrl.current);};
  },[lesson,me,room,materials]);
  const sendCaptureInput=async(input:any)=>{try{await fetch("/api/classroom-capture",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"input",roomCode:room,input})});}catch{}};
-\n useEffect(()=>{if(!recording)return;const t=setInterval(()=>{if(recordStarted.current)setRecordTime(Math.floor((Date.now()-recordStarted.current)/1000));},1000);return()=>clearInterval(t);},[recording]);
+
+ useEffect(()=>{if(!recording)return;const t=setInterval(()=>{if(recordStarted.current)setRecordTime(Math.floor((Date.now()-recordStarted.current)/1000));},1000);return()=>clearInterval(t);},[recording]);
  const displayStream=useRef<MediaStream|null>(null);
  const screenStream=useRef<MediaStream|null>(null);
  const applyDeviceSettings=async()=>{if(sharingScreen){setDeviceStatus("Stop screen sharing before changing your camera.");return;}try{setDeviceStatus("Switching devices…");const constraints:any={audio:selectedAudioInput?{deviceId:{exact:selectedAudioInput}}:true,video:selectedVideoInput?{deviceId:{exact:selectedVideoInput}}:true};const next=await navigator.mediaDevices.getUserMedia(constraints);const previous=localStream.current;for(const kind of ["audio","video"]){const track=next.getTracks().find(t=>t.kind===kind)||null;const sender=peer.current?.getSenders().find(s=>s.track?.kind===kind);if(sender)await sender.replaceTrack(track);if(track)track.enabled=kind==="audio"?!muted:camera;}localStream.current=next;if(localVideo.current){localVideo.current.srcObject=next;void localVideo.current.play().catch(()=>{});}previous?.getTracks().forEach(t=>t.stop());setDeviceStatus("Camera and microphone settings applied.");}catch(err){setDeviceStatus(err instanceof Error?err.message:"Could not switch devices. Check browser permissions.");}};
