@@ -19,5 +19,7 @@ jobs:
           node-version: 20
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: TypeScript check
+        run: npx tsc --noEmit --incremental false
       - name: Build Next.js application
         run: npm run build
