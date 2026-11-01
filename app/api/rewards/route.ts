@@ -7,7 +7,8 @@ async function setup(){await query(`CREATE TABLE IF NOT EXISTS lesson_rewards(
  teacher_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
  reward_type text NOT NULL CHECK(reward_type IN ('donut','star','lollipop')),
  created_at timestamptz NOT NULL DEFAULT now()
-)`);}
+)`); await query("ALTER TABLE lesson_rewards DROP CONSTRAINT IF EXISTS lesson_rewards_reward_type_check"); await query("ALTER TABLE lesson_rewards ADD CONSTRAINT lesson_rewards_reward_type_check CHECK(reward_type IN ('donut','star','lollipop','flower'))");
+}
 
 export async function GET(req:Request){
  try{
@@ -30,7 +31,7 @@ export async function POST(req:Request){
   const s=await requireRole(["TEACHER"]);
   await setup();
   const b=await req.json(),lessonId=String(b.lessonId||""),rewardType=String(b.rewardType||"");
-  if(!lessonId||!["donut","star","lollipop"].includes(rewardType))return NextResponse.json({error:"Choose a valid reward."},{status:400});
+  if(!lessonId||!["donut","star","lollipop","flower"].includes(rewardType))return NextResponse.json({error:"Choose a valid reward."},{status:400});
   const lesson=await query("SELECT id,student_id,teacher_id FROM lessons WHERE id=$1 AND status<>'CANCELLED'",[lessonId]);
   if(!lesson.rowCount||lesson.rows[0].teacher_id!==s.id)return NextResponse.json({error:"Lesson not found or not assigned to you."},{status:403});
   const count=await query("SELECT COUNT(*)::int AS count FROM lesson_rewards WHERE lesson_id=$1",[lessonId]);
