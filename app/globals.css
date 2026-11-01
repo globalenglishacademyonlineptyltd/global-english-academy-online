@@ -334,3 +334,17 @@ body{background:#f5f8fc}
 .gc-recording-controls small{display:block;margin-top:8px;color:#64748b;font-size:10px;line-height:1.45}
 .gc-recording-controls .gc-control-row button{font-weight:800}
 .gc-recording-controls .gc-control-row button:first-child{border-color:#fecaca;background:#fff1f2;color:#be123c}
+
+
+/* GEAO classroom teaching tools */
+.gc-tool-tabs{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0 12px}
+.gc-tool-tabs button{border:1px solid #dbe5f1;border-radius:7px;background:#f8fbff;color:#334155;padding:7px 9px;font-size:10px;font-weight:700}
+.gc-tool-tabs button.active{background:#eaf3ff;border-color:#2563eb;color:#1d4ed8}
+.gc-tool-content{display:grid;gap:8px}
+.gc-tool-content label{display:grid;gap:4px;font-size:10px;font-weight:700;color:#475569}
+.gc-tool-content input,.gc-tool-content select,.gc-tool-content textarea{width:100%;min-width:0;border:1px solid #dbe3ed;border-radius:7px;padding:8px;background:#fff;color:#172033;font:inherit}
+.gc-tool-content button{border:1px solid #2563eb;border-radius:7px;background:#2563eb;color:#fff;padding:8px 10px;font-size:11px;font-weight:750}
+.gc-tool-content button:disabled{opacity:.45}
+.gc-tool-content button.active{background:#fce7f3;border-color:#ec4899;color:#9d174d}
+.gc-tool-clock{font-size:34px;letter-spacing:.06em;text-align:center;color:#2563eb;font-variant-numeric:tabular-nums}
+.gc-tool-status{display:block;margin-top:8px;color:#0f766e;font-size:10px}
