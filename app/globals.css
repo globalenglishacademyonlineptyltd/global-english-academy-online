@@ -312,7 +312,7 @@ body{background:#f5f8fc}
 .gc-material-stage{position:absolute;left:18px;right:18px;top:58px;bottom:18px;overflow:visible;border:0;background:transparent;display:block;}
 .gc-material-stage .gc-material-frame{position:absolute;inset:0;border-radius:9px;background:#f8fafc;border:1px solid #e2e8f0;overflow:hidden;display:flex;align-items:center;justify-content:center;}
 .gc-material-frame img,.gc-material-frame iframe{width:100%;height:100%;border:0;object-fit:contain;background:#fff;}
-.gc-annotation-canvas{position:absolute;left:18px;right:18px;top:58px;bottom:18px;width:calc(100% - 36px);height:calc(100% - 76px);z-index:12;touch-action:none;pointer-events:none;}
+.gc-annotation-canvas{position:absolute;left:18px;right:18px;top:58px;bottom:18px;width:calc(100% - 36px);height:calc(100% - 76px);z-index:30;touch-action:none;pointer-events:none;}
 .gc-annotation-canvas.teacher-annotation{pointer-events:auto;cursor:crosshair;}
 .gc-annotation-canvas.student-annotation{pointer-events:none;}
 .gc-student-lock{position:absolute;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;background:rgba(15,23,42,.58);color:#fff;font-size:clamp(15px,2vw,23px);font-weight:800;letter-spacing:.01em;}
@@ -320,3 +320,71 @@ body{background:#f5f8fc}
 .gc-tools input[type=color]{width:25px;height:25px;padding:0;border:0;background:transparent;}
 .gc-tools input[type=range]{width:58px;}
 .gc-tools select{max-width:145px;white-space:nowrap;border:1px solid #d9e0ea;border-radius:7px;padding:7px 8px;font-size:10px;background:#fff;}
+
+
+/* GEAO live classroom chat panel */
+.gc-chat-list{max-height:190px;min-height:58px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:8px;background:#f8fbff;border:1px solid #e2e8f0;border-radius:8px;margin:8px 0;font-size:12px}
+.gc-chat-list p{margin:0;overflow-wrap:anywhere;line-height:1.45}
+.gc-chat-list strong{color:#2563eb}
+.gc-chat-form{display:flex;gap:6px;align-items:center}
+.gc-chat-form input{min-width:0;flex:1;padding:8px 9px;border:1px solid #d7dce5;border-radius:7px;font:inherit;font-size:12px}
+.gc-chat-form button{background:#2563eb;color:#fff;border:0;font-weight:700}
+.gc-chat-form button:disabled{opacity:.45;cursor:not-allowed}
+
+.gc-recording-controls small{display:block;margin-top:8px;color:#64748b;font-size:10px;line-height:1.45}
+.gc-recording-controls .gc-control-row button{font-weight:800}
+.gc-recording-controls .gc-control-row button:first-child{border-color:#fecaca;background:#fff1f2;color:#be123c}
+
+
+/* GEAO classroom teaching tools */
+.gc-tool-tabs{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0 12px}
+.gc-tool-tabs button{border:1px solid #dbe5f1;border-radius:7px;background:#f8fbff;color:#334155;padding:7px 9px;font-size:10px;font-weight:700}
+.gc-tool-tabs button.active{background:#eaf3ff;border-color:#2563eb;color:#1d4ed8}
+.gc-tool-content{display:grid;gap:8px}
+.gc-tool-content label{display:grid;gap:4px;font-size:10px;font-weight:700;color:#475569}
+.gc-tool-content input,.gc-tool-content select,.gc-tool-content textarea{width:100%;min-width:0;border:1px solid #dbe3ed;border-radius:7px;padding:8px;background:#fff;color:#172033;font:inherit}
+.gc-tool-content button{border:1px solid #2563eb;border-radius:7px;background:#2563eb;color:#fff;padding:8px 10px;font-size:11px;font-weight:750}
+.gc-tool-content button:disabled{opacity:.45}
+.gc-tool-content button.active{background:#fce7f3;border-color:#ec4899;color:#9d174d}
+.gc-tool-clock{font-size:34px;letter-spacing:.06em;text-align:center;color:#2563eb;font-variant-numeric:tabular-nums}
+.gc-tool-status{display:block;margin-top:8px;color:#0f766e;font-size:10px}
+
+/* In-class device picker */
+.gc-device-settings{margin:0 18px 12px;padding:14px 16px;background:#fff;border:1px solid #dbe5f1;border-radius:10px;box-shadow:0 5px 18px rgba(15,23,42,.07)}
+.gc-device-settings-head,.gc-device-settings-footer{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.gc-device-settings-head strong{font-size:13px;color:#172033}
+.gc-device-settings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:12px 0}
+.gc-device-settings-grid label{display:grid;gap:5px;color:#475569;font-size:11px;font-weight:750}
+.gc-device-settings-grid select{width:100%;min-width:0;padding:9px;border:1px solid #dbe3ed;border-radius:7px;background:#fff;color:#172033;font:inherit}
+.gc-device-settings-footer small{color:#64748b;font-size:10px;line-height:1.4}
+.gc-device-settings-footer button{background:#2563eb;color:#fff;border-color:#2563eb;font-weight:750}
+@media(max-width:640px){.gc-device-settings{margin:0 8px 10px;padding:11px}.gc-device-settings-grid{grid-template-columns:1fr}.gc-device-settings-footer{align-items:flex-start;flex-direction:column}}
+
+/* Dedicated screen-share surface keeps teacher and student camera feeds intact. */
+.gc-screen-share-overlay{position:absolute;left:18px;right:18px;top:58px;bottom:18px;z-index:22;display:flex;align-items:center;justify-content:center;background:#0f172a;border:2px solid #2563eb;border-radius:9px;overflow:hidden;pointer-events:none;}
+.gc-screen-share-overlay video{width:100%;height:100%;object-fit:contain;background:#0f172a;}
+.gc-screen-share-overlay span{position:absolute;left:10px;top:10px;padding:5px 8px;border-radius:6px;background:rgba(15,23,42,.78);color:#fff;font-size:9px;font-weight:850;letter-spacing:.08em;}
+
+
+/* Participant roster: compact, readable attendee list in the live classroom sidebar. */
+.gc-participants h3{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.gc-participants h3 span{font-size:10px;font-weight:750;color:#64748b;background:#f1f5f9;border-radius:999px;padding:4px 8px}
+.gc-participant{display:flex;align-items:center;gap:9px;padding:9px 0;border-top:1px solid #eef2f7;min-width:0}
+.gc-participant-avatar{width:34px;height:34px;flex:0 0 34px;display:grid;place-items:center;border-radius:9px;background:#eff6ff;font-size:17px}
+.gc-participant>div{display:grid;gap:2px;min-width:0;flex:1}
+.gc-participant>div strong{font-size:11px;color:#172033;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gc-participant>div small{font-size:9px;color:#64748b}
+.gc-participant-state{font-size:9px;font-weight:800;color:#0f766e;white-space:nowrap}
+
+.gc-device-meter{display:grid;grid-template-columns:110px minmax(80px,1fr) auto;align-items:center;gap:10px;margin:10px 0 12px;color:#475569;font-size:10px;font-weight:700}
+.gc-device-meter>div{height:8px;border-radius:99px;background:#e2e8f0;overflow:hidden}
+.gc-device-meter i{display:block;height:100%;border-radius:99px;background:#22c55e;transition:width .12s linear}
+.gc-device-meter strong{font-size:9px;color:#64748b;font-weight:650}
+.gc-device-settings-footer>div{display:flex;gap:7px;flex-wrap:wrap}
+.gc-device-settings-footer button+button{margin-left:0}
+@media(max-width:640px){.gc-device-meter{grid-template-columns:1fr;gap:5px}}
+
+/* Automatically streamed lesson surface from the dedicated classroom browser. */
+.gc-captured-material{position:absolute;inset:0;width:100%;height:100%;overflow:hidden;background:#0f172a;display:flex;align-items:center;justify-content:center;touch-action:pan-y;outline:none}
+.gc-captured-material img{display:block;width:100%;height:100%;object-fit:contain;user-select:none;-webkit-user-drag:none}
+.gc-material-frame:has(.gc-captured-material){position:relative}
