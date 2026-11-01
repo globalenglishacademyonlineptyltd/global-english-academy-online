@@ -19,8 +19,8 @@ export default function Recordings(){
   });
  },[]);
 
- const teachers=useMemo(()=>Array.from(new Map(rows.map(r=>[r.teacher_id,r.teacher_name]).filter(([id,name])=>id&&name)).entries()).sort((a,b)=>String(a[1]).localeCompare(String(b[1]))),[rows]);
- const students=useMemo(()=>Array.from(new Map(rows.map(r=>[r.student_id,r.student_name]).filter(([id,name])=>id&&name)).entries()).sort((a,b)=>String(a[1]).localeCompare(String(b[1]))),[rows]);
+ const teachers=useMemo(()=>Array.from(new Map(rows.map(r=>[r.teacher_id,r.teacher_name] as [string,string]).filter(([id,name])=>Boolean(id&&name))).entries()).sort((a,b)=>String(a[1]).localeCompare(String(b[1]))),[rows]);
+ const students=useMemo(()=>Array.from(new Map(rows.map(r=>[r.student_id,r.student_name] as [string,string]).filter(([id,name])=>Boolean(id&&name))).entries()).sort((a,b)=>String(a[1]).localeCompare(String(b[1]))),[rows]);
 
  function applyFilter(){
   const startTime=start?new Date(start+"T00:00:00").getTime():null;
