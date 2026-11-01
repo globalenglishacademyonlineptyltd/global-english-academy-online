@@ -320,3 +320,13 @@ body{background:#f5f8fc}
 .gc-tools input[type=color]{width:25px;height:25px;padding:0;border:0;background:transparent;}
 .gc-tools input[type=range]{width:58px;}
 .gc-tools select{max-width:145px;white-space:nowrap;border:1px solid #d9e0ea;border-radius:7px;padding:7px 8px;font-size:10px;background:#fff;}
+
+
+/* GEAO live classroom chat panel */
+.gc-chat-list{max-height:190px;min-height:58px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:8px;background:#f8fbff;border:1px solid #e2e8f0;border-radius:8px;margin:8px 0;font-size:12px}
+.gc-chat-list p{margin:0;overflow-wrap:anywhere;line-height:1.45}
+.gc-chat-list strong{color:#2563eb}
+.gc-chat-form{display:flex;gap:6px;align-items:center}
+.gc-chat-form input{min-width:0;flex:1;padding:8px 9px;border:1px solid #d7dce5;border-radius:7px;font:inherit;font-size:12px}
+.gc-chat-form button{background:#2563eb;color:#fff;border:0;font-weight:700}
+.gc-chat-form button:disabled{opacity:.45;cursor:not-allowed}
