@@ -69,7 +69,7 @@ export default function ClassroomTeachingTools({room,lessonId,teacher,student,st
   };
   tick();const id=setInterval(tick,250);
   return()=>clearInterval(id);
- },[active,teacher,signal]);
+ },[active,teacher]);
 
  const startPoll=()=>{
   const opts=kind==="truefalse"?["True","False"]:kind==="yesno"?["Yes","No"]:kind==="understand"?["I understand","I need help"]:choices.filter(Boolean);
