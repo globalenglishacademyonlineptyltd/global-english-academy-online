@@ -47,17 +47,18 @@ export default function Classroom(){
    const microphoneIncluded=!!localStream.current?.getAudioTracks().some(t=>t.readyState==="live");
    let audioContext:AudioContext|null=null;
    let recordingStream=captured;
+   let tabAudioMixed=false,microphoneMixed=false;
    if(tabAudioIncluded||microphoneIncluded){
     try{
      audioContext=new AudioContext();
      const destination=audioContext.createMediaStreamDestination();
-     if(tabAudioIncluded)new MediaStream(captured.getAudioTracks()).getTracks().forEach(t=>audioContext!.createMediaStreamSource(new MediaStream([t])).connect(destination));
-     if(microphoneIncluded)new MediaStream(localStream.current!.getAudioTracks().filter(t=>t.readyState==="live")).getTracks().forEach(t=>audioContext!.createMediaStreamSource(new MediaStream([t])).connect(destination));
+     if(tabAudioIncluded){captured.getAudioTracks().forEach(t=>audioContext!.createMediaStreamSource(new MediaStream([t])).connect(destination));tabAudioMixed=true;}
+     if(microphoneIncluded){localStream.current!.getAudioTracks().filter(t=>t.readyState==="live").forEach(t=>audioContext!.createMediaStreamSource(new MediaStream([t])).connect(destination));microphoneMixed=true;}
      recordingStream=new MediaStream([...captured.getVideoTracks(),...destination.stream.getAudioTracks()]);
      await audioContext.resume();
-    }catch{audioContext?.close().catch(()=>{});audioContext=null;recordingStream=captured;}
+    }catch{audioContext?.close().catch(()=>{});audioContext=null;recordingStream=captured;tabAudioMixed=false;microphoneMixed=false;}
    }
-   const audioIncluded=tabAudioIncluded&&microphoneIncluded;
+   const audioIncluded=tabAudioMixed&&microphoneMixed;
    const mimeTypes=["video/webm;codecs=vp9,opus","video/webm;codecs=vp8,opus","video/webm"];
    const mime=mimeTypes.find(type=>MediaRecorder.isTypeSupported(type))||"";
    const mr=new MediaRecorder(recordingStream,mime?{mimeType:mime,videoBitsPerSecond:2500000}:undefined);
@@ -85,14 +86,14 @@ export default function Classroom(){
       }
       const final=await fetch("/api/recordings",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"finalize",lessonId:lesson.id,roomCode:room,chunkCount:total,durationSeconds,mimeType:"video/webm"})});
       if(!final.ok){const body=await final.json().catch(()=>({}));throw new Error(body.error||"Recording validation failed.");}
-      setStatus(audioIncluded?"Full classroom recording saved, including lesson/tab audio and your microphone.":tabAudioIncluded?"Classroom recording saved with tab audio. Microphone audio was not available in the recording mix.":"Classroom recording saved with microphone audio. Enable Share tab audio in the browser prompt to include lesson sounds and the other participant audio.");
+      setStatus(audioIncluded?"Full classroom recording saved, including lesson/tab audio and your microphone.":tabAudioMixed?"Classroom recording saved with tab audio. Microphone audio was not available in the recording mix.":microphoneMixed?"Classroom recording saved with microphone audio. Enable Share tab audio in the browser prompt to include lesson sounds and the other participant audio.":"Classroom video saved, but no audio tracks were available to record.");
      }catch(err){setStatus(err instanceof Error?err.message:"Recording could not be safely saved; the previous recording was kept.");}
      finally{URL.revokeObjectURL(url);}
     })();
    };
    captured.getVideoTracks()[0].addEventListener("ended",()=>{if(recorder.current===mr&&mr.state!=="inactive")void stopRecording(true);},{once:true});
    mr.start(1000);
-   setStatus(audioIncluded?"Recording classroom, interactive lesson, both cameras, tab audio and microphone.":tabAudioIncluded?"Recording classroom tab, both cameras and tab audio.":"Recording classroom tab and microphone. Enable Share tab audio to capture lesson and participant audio.");
+   setStatus(audioIncluded?"Recording classroom, interactive lesson, both cameras, tab audio and microphone.":tabAudioMixed?"Recording classroom tab, both cameras and tab audio.":microphoneMixed?"Recording classroom tab, both cameras and microphone. Enable Share tab audio to capture lesson and participant audio.":"Recording classroom video. No audio tracks are currently included.");
   }catch(err){setRecording(false);displayStream.current?.getTracks().forEach(t=>t.stop());displayStream.current=null;setStatus(err instanceof Error?err.message:"Screen recording could not be started. Check browser permissions.");}
  };
  const stopRecording=async(save=true)=>{const active=recorder.current;if(!active)return;shouldSaveRecording.current=save;const stopped=new Promise<void>(resolve=>{if(active.state==="inactive"){resolve();return;}active.addEventListener("stop",()=>resolve(),{once:true});});if(active.state!=="inactive")active.stop();await stopped;if(savePromise.current)await savePromise.current;recorder.current=null;recordStarted.current=0;setRecording(false);};
