@@ -19,6 +19,7 @@ export default function ClassroomTeachingTools({room,lessonId,teacher,student,st
  const [submitted,setSubmitted]=useState(false);
  const [seconds,setSeconds]=useState(60);
  const [remaining,setRemaining]=useState(60);
+ const [pollRemaining,setPollRemaining]=useState(0);
  const [running,setRunning]=useState(false);
  const [roll,setRoll]=useState(false);
  const [attendance,setAttendance]=useState<string[]>([]);
@@ -42,6 +43,7 @@ export default function ClassroomTeachingTools({room,lessonId,teacher,student,st
      if(p.type==="teaching_answer"&&teacher){setResponses(v=>v.some(x=>x.sender===s.sender_id)?v:v.concat([{sender:s.sender_id,name:p.name||"Student",answer:String(p.answerLabel??p.answer??""),correct:!!p.correct,at:Date.now()}]));}
      if(p.type==="teaching_close"&&student){setActive(null);setSubmitted(false);setStatus("The question has closed.");}
      if(p.type==="roll_call"&&student){setRoll(true);setStatus("Your teacher is taking attendance.");}
+     if(p.type==="roll_end"&&student){setRoll(false);setStatus("Roll call has ended.");}
      if(p.type==="roll_response"&&teacher){setAttendance(v=>v.includes(p.name||"Student")?v:v.concat([p.name||"Student"]));}
      if(p.type==="class_timer"&&student){setRemaining(Math.max(0,Number(p.seconds)||0));setRunning(!!p.running);}
     }
@@ -56,6 +58,18 @@ export default function ClassroomTeachingTools({room,lessonId,teacher,student,st
   const id=setInterval(()=>setRemaining(v=>{if(v<=1){setRunning(false);return 0;}return v-1;}),1000);
   return()=>clearInterval(id);
  },[running]);
+
+ useEffect(()=>{
+  if(!active)return;
+  const endAt=Date.now()+Math.max(1,active.seconds||60)*1000;
+  const tick=()=>{
+   const left=Math.max(0,Math.ceil((endAt-Date.now())/1000));
+   setPollRemaining(left);
+   if(left===0){setActive(null);setSubmitted(true);setStatus("Question time is up.");if(teacher)signal({type:"teaching_close"});}
+  };
+  tick();const id=setInterval(tick,250);
+  return()=>clearInterval(id);
+ },[active,teacher,signal]);
 
  const startPoll=()=>{
   const opts=kind==="truefalse"?["True","False"]:kind==="yesno"?["Yes","No"]:kind==="understand"?["I understand","I need help"]:choices.filter(Boolean);
@@ -74,6 +88,7 @@ export default function ClassroomTeachingTools({room,lessonId,teacher,student,st
  const startTimer=()=>{setRemaining(seconds);setRunning(true);signal({type:"class_timer",seconds,running:true});};
  const pauseTimer=()=>{setRunning(false);signal({type:"class_timer",seconds:remaining,running:false});};
  const startRoll=()=>{setRoll(true);setAttendance([]);signal({type:"roll_call"});setStatus("Attendance request sent.");};
+ const endRoll=()=>{setRoll(false);signal({type:"roll_end"});setStatus("Roll call ended.");};
  const respondRoll=()=>{setRoll(false);signal({type:"roll_response",name});setStatus("Attendance confirmed.");};
  const fmt=(n:number)=>String(Math.floor(n/60)).padStart(2,"0")+":"+String(n%60).padStart(2,"0");
  const saveNotes=()=>{const blob=new Blob([notes],{type:"text/plain;charset=utf-8"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="GEAO-class-notes-"+lessonId+".txt";a.click();URL.revokeObjectURL(url);};
@@ -90,18 +105,18 @@ export default function ClassroomTeachingTools({room,lessonId,teacher,student,st
     {kind==="multiple"&&<>{choices.map((v,i)=><label key={i}>Option {String.fromCharCode(65+i)}<input value={v} onChange={e=>setChoices(old=>old.map((x,j)=>i===j?e.target.value:x))}/></label>)}<label>Correct answer<select value={correct} onChange={e=>setCorrect(Number(e.target.value))}>{choices.map((v,i)=><option value={i} key={i}>{String.fromCharCode(65+i)} — {v}</option>)}</select></label></>}
     {kind==="fill"&&<label>Correct answer<input value={choices[0]} onChange={e=>setChoices(old=>[e.target.value,...old.slice(1)])} placeholder="Expected answer"/></label>}
     {(kind==="truefalse"||kind==="yesno")&&<label>Correct answer<select value={correct} onChange={e=>setCorrect(Number(e.target.value))}><option value={0}>{kind==="truefalse"?"True":"Yes"}</option><option value={1}>{kind==="truefalse"?"False":"No"}</option></select></label>}
-    <label>Answer time<select value={seconds} onChange={e=>setSeconds(Number(e.target.value))}><option value="30">30 seconds</option><option value="60">1 minute</option><option value="120">2 minutes</option><option value="240">4 minutes</option><option value="360">6 minutes</option><option value="900">15 minutes</option></select></label>
+    <label>Answer time<select value={seconds} onChange={e=>setSeconds(Number(e.target.value))}><option value="30">30 seconds</option><option value="60">1 minute</option><option value="120">2 minutes</option><option value="240">4 minutes</option><option value="360">6 minutes</option><option value="900">15 minutes</option><option value="2700">45 minutes</option></select></label>
     <button type="button" onClick={startPoll}>Release question to student</button>
     <p>{responses.length} response(s) received</p>
     {responses.map((r,i)=><p key={i}><strong>{r.name}</strong>: {r.answer} — {r.correct?"Correct":"Submitted"}</p>)}
-    {active&&<button type="button" onClick={closePoll}>Close question</button>}
+    {active&&<><p>Time remaining: <strong>{fmt(pollRemaining)}</strong></p><button type="button" onClick={closePoll}>Close question</button></>}
    </>:active?<><strong>{active.question}</strong>
     {active.kind==="fill"?<input value={fillAnswer} onChange={e=>setFillAnswer(e.target.value)} disabled={submitted} placeholder="Type your answer"/>:active.choices.map((v,i)=><button type="button" key={i} className={answer===String(i)?"active":""} onClick={()=>setAnswer(active.kind==="understand"?v:String(i))} disabled={submitted}>{active.kind==="multiple"?String.fromCharCode(65+i)+". ":""}{v}</button>)}
     <button type="button" disabled={submitted||(active.kind==="fill"?!fillAnswer.trim():!answer)} onClick={sendAnswer}>{submitted?"Answer submitted":"Submit answer"}</button>
    </>:<p>Waiting for your teacher to release a question.</p>}
   </div>}
   {tab==="attendance"&&<div className="gc-tool-content">
-   {teacher?<><button type="button" onClick={startRoll}>Start roll call</button><p><strong>Attendance responses</strong></p>{attendance.length?attendance.map((n,i)=><p key={i}>🟢 {n} — Present</p>):<p>Waiting for student confirmation.</p>}</>:roll?<><p>Your teacher is taking attendance.</p><button type="button" onClick={respondRoll}>I'm present</button></>:<p>There is no active roll call.</p>}
+   {teacher?<><button type="button" onClick={startRoll}>Start roll call</button><button type="button" onClick={endRoll} disabled={!roll}>End roll call</button><p><strong>Attendance responses</strong></p>{attendance.length?attendance.map((n,i)=><p key={i}>🟢 {n} — Present</p>):<p>Waiting for student confirmation.</p>}</>:roll?<><p>Your teacher is taking attendance.</p><button type="button" onClick={respondRoll}>I'm present</button></>:<p>There is no active roll call.</p>}
   </div>}
   {tab==="timer"&&<div className="gc-tool-content"><strong className="gc-tool-clock">{fmt(remaining)}</strong>{teacher&&<><label>Countdown duration<select value={seconds} onChange={e=>setSeconds(Number(e.target.value))}><option value="120">2 minutes</option><option value="240">4 minutes</option><option value="360">6 minutes</option><option value="900">15 minutes</option><option value="2700">45 minutes</option></select></label><button type="button" onClick={startTimer}>Start countdown</button><button type="button" onClick={pauseTimer}>Pause countdown</button></>}{student&&<p>{running?"Your teacher's countdown is running.":"Waiting for your teacher to start the timer."}</p>}</div>}
   {tab==="notes"&&<div className="gc-tool-content"><textarea rows={5} value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Write lesson notes, new vocabulary and homework…"/><button type="button" onClick={saveNotes}>Save class notes</button><p>Notes are private to this classroom session. Save a copy before leaving.</p></div>}
