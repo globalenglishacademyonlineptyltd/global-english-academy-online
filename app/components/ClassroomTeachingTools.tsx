@@ -39,7 +39,7 @@ export default function ClassroomTeachingTools({room,lessonId,teacher,student,st
      const p=s.payload||{};
      if(s.sender_id===j.userId)continue;
      if(p.type==="teaching_poll"&&student){setActive(p.poll);setAnswer("");setFillAnswer("");setSubmitted(false);setStatus("Your teacher has sent a question.");}
-     if(p.type==="teaching_answer"&&teacher){setResponses(v=>v.some(x=>x.sender===s.sender_id)?v:v.concat([{sender:s.sender_id,name:p.name||"Student",answer:String(p.answer??""),correct:!!p.correct,at:Date.now()}]));}
+     if(p.type==="teaching_answer"&&teacher){setResponses(v=>v.some(x=>x.sender===s.sender_id)?v:v.concat([{sender:s.sender_id,name:p.name||"Student",answer:active&&(active.kind==="multiple"||active.kind==="truefalse"||active.kind==="yesno")?(active.choices[Number(p.answer)]||String(p.answer)):String(p.answer??""),correct:!!p.correct,at:Date.now()}]));}
      if(p.type==="teaching_close"&&student){setActive(null);setSubmitted(false);setStatus("The question has closed.");}
      if(p.type==="roll_call"&&student){setRoll(true);setStatus("Your teacher is taking attendance.");}
      if(p.type==="roll_response"&&teacher){setAttendance(v=>v.includes(p.name||"Student")?v:v.concat([p.name||"Student"]));}
