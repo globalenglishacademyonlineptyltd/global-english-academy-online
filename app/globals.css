@@ -330,3 +330,7 @@ body{background:#f5f8fc}
 .gc-chat-form input{min-width:0;flex:1;padding:8px 9px;border:1px solid #d7dce5;border-radius:7px;font:inherit;font-size:12px}
 .gc-chat-form button{background:#2563eb;color:#fff;border:0;font-weight:700}
 .gc-chat-form button:disabled{opacity:.45;cursor:not-allowed}
+
+.gc-recording-controls small{display:block;margin-top:8px;color:#64748b;font-size:10px;line-height:1.45}
+.gc-recording-controls .gc-control-row button{font-weight:800}
+.gc-recording-controls .gc-control-row button:first-child{border-color:#fecaca;background:#fff1f2;color:#be123c}
