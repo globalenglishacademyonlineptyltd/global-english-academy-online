@@ -47,51 +47,41 @@ export default function Classroom(){
  const applyDeviceSettings=async()=>{if(sharingScreen){setDeviceStatus("Stop screen sharing before changing your camera.");return;}try{setDeviceStatus("Switching devices…");const constraints:any={audio:selectedAudioInput?{deviceId:{exact:selectedAudioInput}}:true,video:selectedVideoInput?{deviceId:{exact:selectedVideoInput}}:true};const next=await navigator.mediaDevices.getUserMedia(constraints);const previous=localStream.current;for(const kind of ["audio","video"]){const track=next.getTracks().find(t=>t.kind===kind)||null;const sender=peer.current?.getSenders().find(s=>s.track?.kind===kind);if(sender)await sender.replaceTrack(track);if(track)track.enabled=kind==="audio"?!muted:camera;}localStream.current=next;if(localVideo.current){localVideo.current.srcObject=next;void localVideo.current.play().catch(()=>{});}previous?.getTracks().forEach(t=>t.stop());setDeviceStatus("Camera and microphone settings applied.");}catch(err){setDeviceStatus(err instanceof Error?err.message:"Could not switch devices. Check browser permissions.");}};
  const stopScreenShare=async()=>{const stream=screenStream.current;if(!stream)return;stream.getTracks().forEach(t=>t.stop());screenStream.current=null;if(screenTransceiver.current)await screenTransceiver.current.sender.replaceTrack(null);await signal({type:"screen_share",active:false});setSharingScreen(false);setStatus("Screen sharing stopped; your camera remains on.");};
  const startScreenShare=async()=>{if(!teacher||sharingScreen||!navigator.mediaDevices?.getDisplayMedia)return;try{if(!screenTransceiver.current)throw new Error("The classroom screen-share channel is not ready.");const stream=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:{ideal:20,max:30}},audio:false});const track=stream.getVideoTracks()[0];if(!track)throw new Error("No screen video was shared.");await screenTransceiver.current.sender.replaceTrack(track);screenStream.current=stream;setSharingScreen(true);await signal({type:"screen_share",active:true});setStatus("Your screen is being shared in the teaching area. Your camera remains visible.");track.addEventListener("ended",()=>{if(screenStream.current===stream)void stopScreenShare();},{once:true});}catch(err){setStatus(err instanceof Error?err.message:"Screen sharing could not be started. Check browser permissions.");}};
- const startRecording=async()=>{
- if(recording||!lesson||leavingRef.current||!teacher||!localStream.current)return;
- let audioContext:AudioContext|null=null,drawFrame=0,uploadQueue=Promise.resolve(),uploadFailed=false,chunkIndex=0;
- try{
-  setStatus("Starting automatic classroom recording…");
-  const canvasElement=document.createElement("canvas");canvasElement.width=1280;canvasElement.height=720;
-  const context=canvasElement.getContext("2d");if(!context)throw new Error("Could not initialize classroom recording.");
-  const draw=()=>{
-   context.fillStyle="#111827";context.fillRect(0,0,1280,720);
-   context.fillStyle="#fff";context.font="bold 30px Arial";context.fillText(lesson.topic||"English Lesson",32,48);
-   const tile=(video:HTMLVideoElement|null,x:number,label:string)=>{
-    const y=76,w=608,h=590;context.fillStyle="#273449";context.fillRect(x,y,w,h);
-    if(video&&video.readyState>=2&&video.videoWidth>0){const scale=Math.max(w/video.videoWidth,h/video.videoHeight),sw=w/scale,sh=h/scale;try{context.drawImage(video,(video.videoWidth-sw)/2,(video.videoHeight-sh)/2,sw,sh,x,y,w,h);}catch{}}
-    else{context.fillStyle="#fff";context.font="24px Arial";context.fillText("Waiting for "+label,x+24,y+h/2);}
-    context.fillStyle="rgba(0,0,0,.65)";context.fillRect(x,y+h-42,w,42);context.fillStyle="#fff";context.font="bold 20px Arial";context.fillText(label,x+16,y+h-14);
-   };
-   tile(localVideo.current,24,lesson.teacher_name||"Teacher");tile(remoteVideo.current,648,lesson.student_name||"Student");
-   drawFrame=requestAnimationFrame(draw);
+  const recordingAutoStart=useRef(false);
+  const startRecording=async()=>{
+   if(recording||!lesson||leavingRef.current||!teacher||!connected||!localStream.current||!remoteStream.current)return;
+   if(typeof MediaRecorder==="undefined"||!HTMLCanvasElement.prototype.captureStream){setStatus("Automatic recording is not supported in this browser.");return;}
+   try{
+    setStatus("Starting automatic classroom recording…");
+    const surface=document.createElement("canvas");surface.width=1280;surface.height=720;
+    const ctx=surface.getContext("2d");if(!ctx)throw new Error("Could not initialize recording.");
+    let active=true;let frame=0;
+    const draw=()=>{if(!active)return;ctx.fillStyle="#111827";ctx.fillRect(0,0,1280,720);
+     const tile=(v:HTMLVideoElement|null,x:number,y:number,w:number,h:number,label:string)=>{if(v&&v.readyState>=2&&v.videoWidth){const scale=Math.max(w/v.videoWidth,h/v.videoHeight),sw=w/scale,sh=h/scale;ctx.drawImage(v,(v.videoWidth-sw)/2,(v.videoHeight-sh)/2,sw,sh,x,y,w,h);}else{ctx.fillStyle="#263449";ctx.fillRect(x,y,w,h);}ctx.fillStyle="rgba(0,0,0,.65)";ctx.fillRect(x,y+h-42,w,42);ctx.fillStyle="#fff";ctx.font="22px sans-serif";ctx.fillText(label,x+14,y+h-13);};
+     tile(localVideo.current,0,0,640,360,lesson.teacher_name||"Teacher");tile(remoteVideo.current,640,0,640,360,lesson.student_name||"Student");
+     const shared=sharingScreen?localScreenVideo.current:remoteScreenVideo.current;
+     if(shared&&shared.readyState>=2&&shared.videoWidth)tile(shared,0,360,1280,360,"Shared screen");
+     else{ctx.fillStyle="#fff";ctx.font="22px sans-serif";ctx.fillText(lesson.topic||"English lesson",24,410);ctx.font="16px sans-serif";ctx.fillText("Embedded lesson visuals are not directly accessible to browser recording.",24,446);}
+     frame=requestAnimationFrame(draw);};
+    draw();
+    const video=surface.captureStream(20),audioCtx=new AudioContext(),mix=audioCtx.createMediaStreamDestination();
+    const tracks=[...localStream.current.getAudioTracks(),...remoteStream.current.getAudioTracks()].filter(t=>t.readyState==="live");
+    for(const track of tracks)audioCtx.createMediaStreamSource(new MediaStream([track])).connect(mix);
+    await audioCtx.resume();
+    const stream=new MediaStream([...video.getVideoTracks(),...mix.stream.getAudioTracks()]);
+    const mime=["video/webm;codecs=vp9,opus","video/webm;codecs=vp8,opus","video/webm"].find(t=>MediaRecorder.isTypeSupported(t))||"";
+    const mr=new MediaRecorder(stream,mime?{mimeType:mime,videoBitsPerSecond:2500000}:undefined);
+    recorder.current=mr;recordChunks.current=[];recordStarted.current=Date.now();shouldSaveRecording.current=true;setRecordTime(0);setRecording(true);
+    let index=0;let queue=Promise.resolve();let failed:Error|null=null;
+    mr.ondataavailable=e=>{if(!e.data.size)return;recordChunks.current.push(e.data);const n=index++;queue=queue.then(async()=>{if(failed)throw failed;const data=await new Promise<string>((resolve,reject)=>{const rd=new FileReader();rd.onload=()=>typeof rd.result==="string"?resolve(rd.result):reject(new Error("Could not read recording segment."));rd.onerror=()=>reject(new Error("Could not read recording segment."));rd.readAsDataURL(e.data);});const res=await fetch("/api/recordings",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"chunk",lessonId:lesson.id,roomCode:room,chunkIndex:n,mimeType:"video/webm",data})});if(!res.ok){const j=await res.json().catch(()=>({}));throw new Error(j.error||"Recording segment upload failed.");}}).catch(err=>{failed=err instanceof Error?err:new Error("Recording upload failed.");setStatus(failed.message);});};
+    mr.onstop=()=>{active=false;cancelAnimationFrame(frame);const durationSeconds=Math.floor((Date.now()-recordStarted.current)/1000);const blob=new Blob(recordChunks.current,{type:mr.mimeType||"video/webm"});recordChunks.current=[];video.getTracks().forEach(t=>t.stop());stream.getTracks().forEach(t=>t.stop());void audioCtx.close().catch(()=>{});
+     savePromise.current=(async()=>{await queue;if(!shouldSaveRecording.current)return;if(failed)throw failed;if(blob.size<1024)throw new Error("Recording is too small to save.");const res=await fetch("/api/recordings",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"finalize",lessonId:lesson.id,roomCode:room,chunkCount:index,durationSeconds,mimeType:"video/webm"})});if(!res.ok){const j=await res.json().catch(()=>({}));throw new Error(j.error||"Could not finalize recording.");}setStatus("Automatic classroom recording saved.");})().catch(err=>setStatus(err instanceof Error?err.message:"Recording save failed."));};
+    mr.onerror=()=>setStatus("Recording encountered a browser error.");mr.start(2000);setStatus("Automatic recording active: both cameras and available microphones.");
+   }catch(err){setRecording(false);setStatus(err instanceof Error?err.message:"Automatic recording could not start.");}
   };
-  draw();const videoStream=canvasElement.captureStream(24);
-  audioContext=new AudioContext();const destination=audioContext.createMediaStreamDestination();
-  const addAudio=(stream:MediaStream|null)=>{if(!stream)return;const tracks=stream.getAudioTracks().filter(t=>t.readyState==="live");if(tracks.length)try{audioContext!.createMediaStreamSource(new MediaStream(tracks)).connect(destination);}catch{}};
-  addAudio(localStream.current);addAudio(remoteStream.current);await audioContext.resume();
-  const recordingStream=new MediaStream([...videoStream.getVideoTracks(),...destination.stream.getAudioTracks()]);
-  const mimeTypes=["video/webm;codecs=vp9,opus","video/webm;codecs=vp8,opus","video/webm"],mime=mimeTypes.find(t=>MediaRecorder.isTypeSupported(t))||"";
-  const mr=new MediaRecorder(recordingStream,mime?{mimeType:mime,videoBitsPerSecond:1800000}:undefined);
-  recorder.current=mr;recordChunks.current=[];recordStarted.current=Date.now();shouldSaveRecording.current=true;setRecordTime(0);setRecording(true);
-  mr.ondataavailable=e=>{if(!e.data?.size)return;const index=chunkIndex++;uploadQueue=uploadQueue.then(async()=>{
-   const data=await new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>typeof reader.result==="string"?resolve(reader.result):reject(new Error("Could not read recording segment."));reader.onerror=()=>reject(new Error("Could not read recording segment."));reader.readAsDataURL(e.data);});
-   const response=await fetch("/api/recordings",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"chunk",lessonId:lesson.id,roomCode:room,chunkIndex:index,mimeType:"video/webm",data})});
-   if(!response.ok){const body=await response.json().catch(()=>({}));throw new Error(body.error||"A recording segment could not be saved.");}
-  }).catch(err=>{uploadFailed=true;setStatus(err instanceof Error?err.message:"Recording upload failed.");});};
-  mr.onerror=()=>{uploadFailed=true;setStatus("Recording error. Previously uploaded segments are being preserved.");};
-  mr.onstop=()=>{const durationSeconds=Math.max(0,Math.floor((Date.now()-recordStarted.current)/1000));cancelAnimationFrame(drawFrame);videoStream.getTracks().forEach(t=>t.stop());recordingStream.getTracks().forEach(t=>t.stop());if(audioContext)void audioContext.close().catch(()=>{});
-   savePromise.current=(async()=>{await uploadQueue;if(!shouldSaveRecording.current)return;if(uploadFailed||chunkIndex===0){setStatus("Recording upload incomplete. Uploaded segments were retained; the previous recording was not replaced.");return;}
-    try{const final=await fetch("/api/recordings",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"finalize",lessonId:lesson.id,roomCode:room,chunkCount:chunkIndex,durationSeconds,mimeType:"video/webm"})});if(!final.ok){const body=await final.json().catch(()=>({}));throw new Error(body.error||"Recording finalization failed; uploaded segments were retained.");}setStatus("Automatic classroom recording saved with both camera feeds and available microphone audio.");}
-    catch(err){setStatus(err instanceof Error?err.message:"Recording could not be finalized; uploaded segments were retained.");}
-   })();
-  };
-  mr.start(1000);setStatus("Automatic recording is active: both camera feeds and available microphone audio are being captured.");
- }catch(err){if(drawFrame)cancelAnimationFrame(drawFrame);if(audioContext)void audioContext.close().catch(()=>{});setRecording(false);setStatus(err instanceof Error?err.message:"Automatic classroom recording could not start.");}
-};
-const stopRecording=async(save=true)=>{const active=recorder.current;if(!active)return;shouldSaveRecording.current=save;const stopped=new Promise<void>(resolve=>{if(active.state==="inactive"){resolve();return;}active.addEventListener("stop",()=>resolve(),{once:true});});if(active.state!=="inactive")active.stop();await stopped;if(savePromise.current)await savePromise.current;recorder.current=null;recordStarted.current=0;setRecording(false);};
- useEffect(()=>{if(!teacher||!connected||!lesson||recording||leavingRef.current||autoRecordingStarted.current||!localStream.current||!remoteStream.current)return;autoRecordingStarted.current=true;void startRecording();},[teacher,connected,lesson,recording]);
-  const endClass=async()=>{if(me?.role==="ADMIN"||!lesson)return;if(ending)return;leavingRef.current=true;setEnding(true);try{if(teacher&&sharingScreen)await stopScreenShare();if(teacher)await signal({type:"left"});const exit=await fetch("/api/classroom-exit",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:lesson.id})});if(!exit.ok)throw new Error("Could not register classroom exit.");const state=await exit.json();if(state.bothExited){if(teacher)await stopRecording(true);const complete=await fetch("/api/classroom-complete",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:lesson.id})});if(!complete.ok)throw new Error("Could not complete the classroom.");}else{if(teacher)await stopRecording(true);}window.location.replace("https://globalenglishacademyonline.co.za/");}catch{setEnding(false);setError("We could not register your classroom exit. Please try End Class again.");}};
+  const stopRecording=async(save=true)=>{const active=recorder.current;if(!active)return;shouldSaveRecording.current=save;const stopped=new Promise<void>(resolve=>{if(active.state==="inactive"){resolve();return;}active.addEventListener("stop",()=>resolve(),{once:true});});if(active.state!=="inactive")active.stop();await stopped;if(savePromise.current)await savePromise.current;recorder.current=null;recordStarted.current=0;setRecording(false);};
+  useEffect(()=>{if(!teacher||!connected||!lesson||recording||recordingAutoStart.current||leavingRef.current)return;recordingAutoStart.current=true;void startRecording();},[teacher,connected,lesson,recording]);
+    const endClass=async()=>{if(me?.role==="ADMIN"||!lesson)return;if(ending)return;leavingRef.current=true;setEnding(true);try{if(teacher&&sharingScreen)await stopScreenShare();if(teacher)await signal({type:"left"});const exit=await fetch("/api/classroom-exit",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:lesson.id})});if(!exit.ok)throw new Error("Could not register classroom exit.");const state=await exit.json();if(state.bothExited){if(teacher)await stopRecording(true);const complete=await fetch("/api/classroom-complete",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({lessonId:lesson.id})});if(!complete.ok)throw new Error("Could not complete the classroom.");}else{if(teacher)await stopRecording(true);}window.location.replace("https://globalenglishacademyonline.co.za/");}catch{setEnding(false);setError("We could not register your classroom exit. Please try End Class again.");}};
  const startGame=(g:any)=>{if(!teacher)return;setGame(g);setInteractive(true);setScore(0);setReward("");setSortDrag("");setOrderPick([]);broadcast({game:g,interactive:true,score:0,reward:""});};
  const answer=(item:string)=>{if(!student||!interactive||!game)return;let ok=false;if(game.id==="pick")ok=item===game.answer;if(game.id==="sort"){const parts=item.split("|");const land=parts[0].includes("Dog")||parts[0].includes("Cat");const water=parts[0].includes("Fish")||parts[0].includes("Shark");ok=(land&&parts[1]==="Land")||(water&&parts[1]==="Water");}if(game.id==="order"){const nextOrder=orderPick.concat([item]);setOrderPick(nextOrder);ok=nextOrder.join("|")===game.items.join("|");if(!ok&&nextOrder.length>=game.items.length){setOrderPick([]);setReward("Try the order again!");return;}}const next=ok?score+1:score;setScore(next);setReward(ok?"⭐ Great job!":"Try again!");signal({type:"state",interactive,game,score:next,reward:ok?"⭐ Great job!":"Try again!"});};
  const sendChat=()=>{const text=chatText.trim();if(!text)return;const name=me?.name||"User";setChat(v=>v.concat([{name,text}]).slice(-80));signal({type:"chat",name,text});setChatText("");};
