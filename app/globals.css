@@ -359,3 +359,8 @@ body{background:#f5f8fc}
 .gc-device-settings-footer small{color:#64748b;font-size:10px;line-height:1.4}
 .gc-device-settings-footer button{background:#2563eb;color:#fff;border-color:#2563eb;font-weight:750}
 @media(max-width:640px){.gc-device-settings{margin:0 8px 10px;padding:11px}.gc-device-settings-grid{grid-template-columns:1fr}.gc-device-settings-footer{align-items:flex-start;flex-direction:column}}
+
+/* Dedicated screen-share surface keeps teacher and student camera feeds intact. */
+.gc-screen-share-overlay{position:absolute;left:18px;right:18px;top:58px;bottom:18px;z-index:10;display:flex;align-items:center;justify-content:center;background:#0f172a;border:2px solid #2563eb;border-radius:9px;overflow:hidden;pointer-events:none;}
+.gc-screen-share-overlay video{width:100%;height:100%;object-fit:contain;background:#0f172a;}
+.gc-screen-share-overlay span{position:absolute;left:10px;top:10px;padding:5px 8px;border-radius:6px;background:rgba(15,23,42,.78);color:#fff;font-size:9px;font-weight:850;letter-spacing:.08em;}
