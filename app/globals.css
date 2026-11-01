@@ -364,3 +364,14 @@ body{background:#f5f8fc}
 .gc-screen-share-overlay{position:absolute;left:18px;right:18px;top:58px;bottom:18px;z-index:22;display:flex;align-items:center;justify-content:center;background:#0f172a;border:2px solid #2563eb;border-radius:9px;overflow:hidden;pointer-events:none;}
 .gc-screen-share-overlay video{width:100%;height:100%;object-fit:contain;background:#0f172a;}
 .gc-screen-share-overlay span{position:absolute;left:10px;top:10px;padding:5px 8px;border-radius:6px;background:rgba(15,23,42,.78);color:#fff;font-size:9px;font-weight:850;letter-spacing:.08em;}
+
+
+/* Participant roster: compact, readable attendee list in the live classroom sidebar. */
+.gc-participants h3{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.gc-participants h3 span{font-size:10px;font-weight:750;color:#64748b;background:#f1f5f9;border-radius:999px;padding:4px 8px}
+.gc-participant{display:flex;align-items:center;gap:9px;padding:9px 0;border-top:1px solid #eef2f7;min-width:0}
+.gc-participant-avatar{width:34px;height:34px;flex:0 0 34px;display:grid;place-items:center;border-radius:9px;background:#eff6ff;font-size:17px}
+.gc-participant>div{display:grid;gap:2px;min-width:0;flex:1}
+.gc-participant>div strong{font-size:11px;color:#172033;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gc-participant>div small{font-size:9px;color:#64748b}
+.gc-participant-state{font-size:9px;font-weight:800;color:#0f766e;white-space:nowrap}
