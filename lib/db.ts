@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS notifications(id uuid PRIMARY KEY DEFAULT gen_random_
 CREATE TABLE IF NOT EXISTS password_reset_tokens(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,token_hash text UNIQUE NOT NULL,expires_at timestamptz NOT NULL,used_at timestamptz);
 ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;ALTER TABLE users ADD CONSTRAINT users_role_check CHECK(role IN ('ADMIN','TEACHER','STUDENT','PARENT'));
 ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password boolean NOT NULL DEFAULT false;
+ALTER TABLE students ADD COLUMN IF NOT EXISTS purchased_classes integer NOT NULL DEFAULT 0;
 ALTER TABLE students ADD COLUMN IF NOT EXISTS age int;ALTER TABLE students ADD COLUMN IF NOT EXISTS starting_material_id uuid;ALTER TABLE students DROP CONSTRAINT IF EXISTS students_starting_material_fk;ALTER TABLE students ADD CONSTRAINT students_starting_material_fk FOREIGN KEY(starting_material_id) REFERENCES materials(id) ON DELETE SET NULL;
 ALTER TABLE students ADD COLUMN IF NOT EXISTS ferris_wheel_material_id uuid REFERENCES materials(id) ON DELETE SET NULL;
 ALTER TABLE students ADD COLUMN IF NOT EXISTS demo_enabled boolean NOT NULL DEFAULT true;ALTER TABLE students ADD COLUMN IF NOT EXISTS lesson_duration_minutes integer NOT NULL DEFAULT 30;UPDATE students SET lesson_duration_minutes=30 WHERE lesson_duration_minutes IS NULL OR lesson_duration_minutes NOT IN (30,50);
