@@ -19,7 +19,7 @@ export async function checkStudentLessonBalanceAlerts(studentId:string){
     GROUP BY u.id,st.purchased_classes,st.lesson_package_version
   `,[studentId]);
   const student=result.rows[0];
-  if(!student)return;
+  if(!student||Number(student.purchased_classes)<=0)return;
   const remaining=Number(student.remaining);
   const alertType=remaining<=0?"DEPLETED":remaining<10?"LOW_BALANCE":null;
   if(!alertType)return;
