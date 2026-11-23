@@ -24,9 +24,9 @@ export async function checkStudentLessonBalanceAlerts(studentId:string){
   const alertType=remaining<=0?"DEPLETED":remaining<10?"LOW_BALANCE":null;
   if(!alertType)return;
   const contact=await query<any>("SELECT parent_emails FROM students WHERE user_id=$1",[studentId]);
-  const parentEmails=String(contact.rows[0]?.parent_emails||"").split(/[;,\\s]+/).map((v:string)=>v.trim().toLowerCase()).filter((v:string)=>/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(v));
+  const parentEmails=String(contact.rows[0]?.parent_emails||"").split(/[;,\s]+/).map((v:string)=>v.trim().toLowerCase()).filter((v:string)=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v));
   const parents=[...new Set(parentEmails)].map(email=>({email,full_name:"Parent/Guardian"}));
-  for(const parent of parents.rows){
+  for(const parent of parents){
     const claim=await query<any>(`
       INSERT INTO student_lesson_alerts(student_id,package_version,alert_type,recipient_email)
       VALUES($1,$2,$3,$4) ON CONFLICT(student_id,package_version,alert_type,recipient_email) DO NOTHING
