@@ -23,13 +23,9 @@ export async function checkStudentLessonBalanceAlerts(studentId:string){
   const remaining=Number(student.remaining);
   const alertType=remaining<=0?"DEPLETED":remaining<10?"LOW_BALANCE":null;
   if(!alertType)return;
-  const parents=await query<any>(`
-    SELECT DISTINCT p.email,p.full_name
-    FROM parent_students ps
-    JOIN users p ON p.id=ps.parent_id
-    WHERE ps.student_id=$1 AND p.role='PARENT' AND p.active=true
-      AND p.deleted_at IS NULL AND p.email IS NOT NULL AND trim(p.email)<>''
-  `,[studentId]);
+  const contact=await query<any>("SELECT parent_emails FROM students WHERE user_id=$1",[studentId]);
+  const parentEmails=String(contact.rows[0]?.parent_emails||"").split(/[;,\\s]+/).map((v:string)=>v.trim().toLowerCase()).filter((v:string)=>/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(v));
+  const parents=[...new Set(parentEmails)].map(email=>({email,full_name:"Parent/Guardian"}));
   for(const parent of parents.rows){
     const claim=await query<any>(`
       INSERT INTO student_lesson_alerts(student_id,package_version,alert_type,recipient_email)
