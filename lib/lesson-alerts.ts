@@ -10,8 +10,8 @@ export async function checkStudentLessonBalanceAlerts(studentId:string){
     SELECT u.full_name student_name,COALESCE(st.purchased_classes,0)::int purchased_classes,
       COALESCE(st.lesson_package_version,1)::int package_version,
       GREATEST(COALESCE(st.purchased_classes,0)
-        - COUNT(l.id) FILTER(WHERE l.status<>'CANCELLED')
-        - COUNT(l.id) FILTER(WHERE l.status='CANCELLED' AND l.student_cancelled_late=true),0)::int remaining
+        - COUNT(l.id) FILTER(WHERE l.status IN ('COMPLETED','NO_SHOW') OR (l.status='CANCELLED' AND l.student_cancelled_late=true))
+        - COUNT(l.id) FILTER(WHERE l.status NOT IN ('CANCELLED','COMPLETED','NO_SHOW','MISSED_BY_TEACHER','MISSED_BY_TEACHER_AND_STUDENT') AND l.starts_at>=now()),0)::int remaining
     FROM users u
     JOIN students st ON st.user_id=u.id
     LEFT JOIN lessons l ON l.student_id=u.id
