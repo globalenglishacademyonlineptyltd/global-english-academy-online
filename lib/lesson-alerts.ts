@@ -37,7 +37,7 @@ export async function checkStudentLessonBalanceAlerts(studentId:string){
       ?"Lesson package depleted — "+student.student_name
       :"Lesson balance running low — "+student.student_name;
     const message=alertType==="DEPLETED"
-      :"Dear "+(parent.full_name||"Parent/Guardian")+",\n\nThis is to let you know that "+student.student_name+"'s lesson package has been depleted. The remaining lesson balance is 0. Please contact Global English Academy Online to arrange a new paid lesson package. The student will be able to book lessons again once the school has allocated the new package.\n\nKind regards,\nGlobal English Academy Online"
+      ?"Dear "+(parent.full_name||"Parent/Guardian")+",\n\nThis is to let you know that "+student.student_name+"'s lesson package has been depleted. The remaining lesson balance is 0. Please contact Global English Academy Online to arrange a new paid lesson package. The student will be able to book lessons again once the school has allocated the new package.\n\nKind regards,\nGlobal English Academy Online"
       :"Dear "+(parent.full_name||"Parent/Guardian")+",\n\nThis is a friendly reminder that "+student.student_name+" has "+remaining+" lesson"+(remaining===1?"":"s")+" remaining in the current lesson package. The balance is now below 10 lessons. Please contact Global English Academy Online to arrange the next package before the lessons run out.\n\nKind regards,\nGlobal English Academy Online";
     const sent=await sendEmail(parent.email,subject,message);
     if(!sent){
